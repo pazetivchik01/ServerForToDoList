@@ -40,6 +40,52 @@ namespace ServerForToDoList.Controllers
             }
         }
 
+        
+        [HttpGet("created-by/{userId}")]
+        public async Task<IActionResult> GetTasksCreatedByUserAsync(int userId)
+        {
+            try
+            {
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
+
+                var tasks = await _context.Tasks
+                    .Where(t => t.CreatedBy == userId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(tasks.Select(t => Extensions.TaskExtensions.ToDto(t)));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        [HttpGet("assigned-to/{userId}")]
+        public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
+        {
+            try
+            {
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
+
+                var tasks = await _context.TaskAssignments
+                    .Where(ta => ta.UserId == userId)
+                    .Include(ta => ta.Task) 
+                    .Select(ta => ta.Task)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(tasks.Select(t => Extensions.TaskExtensions.ToDto(t)));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+
         // POST api/task
         [HttpPost]
         public IActionResult CreateTask([FromBody] TaskDTO jsTask)
