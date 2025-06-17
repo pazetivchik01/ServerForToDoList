@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
@@ -36,18 +37,20 @@ public class AuthController : ControllerBase
             if (user == null)
             {
                 _logger.LogWarning($"Попытка входа с несуществующим логином: {request.login}");
-                return Unauthorized(new { Message = "Неверные учетные данные" });
+                var mes = new { Message = "Неверные учетные данные" };
+                return Unauthorized(mes);
             }
 
-            if (user.PasswordHash != request.password)
+
+
+            if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
             {
                 _logger.LogWarning($"Неверный пароль для пользователя: {request.login}");
                 return Unauthorized(new { Message = "Неверные учетные данные" });
             }
 
             var token = GenerateJwtToken(user);
-
-            return Ok(new
+            var answer = new
             {
                 Token = token,
                 User = new
@@ -58,7 +61,8 @@ public class AuthController : ControllerBase
                     user.FirstName,
                     user.LastName
                 }
-            });
+            };
+            return Ok(answer);
         }
         catch (Exception ex)
         {

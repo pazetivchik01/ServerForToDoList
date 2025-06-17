@@ -1,6 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
+using ServerForToDoList.Model;
 using ServerForToDoList.Repositories;
+using System.Data;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -19,7 +24,7 @@ public class UserController : ControllerBase
 
 
     [HttpGet("get/{id}")] // http://localhost:5131/api/user/get/number (number - ýòî id)
-    public async Task<IActionResult> GetUserAsync(int id)//!!!!!!!!!!!!!!Íóæíî  âñå ìåòîäû â êîíòðîëàõ ñäåëàòü àñèíõðîííûìè !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    public async Task<IActionResult> GetUserByIdAsync(int id)//!!!!!!!!!!!!!!Íóæíî  âñå ìåòîäû â êîíòðîëàõ ñäåëàòü àñèíõðîííûìè !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     {
         if(id <= 0)
             return BadRequest("Id is invalid");
@@ -51,19 +56,48 @@ public class UserController : ControllerBase
         }
     }
     [HttpPost("register")] // http://localhost:5131/api/user/register
-    public IActionResult RegisterUser([FromBody] List<UserRequest> requests) // ðåãèñòðàöèÿ ïîëüçîâàòåëÿ (json îòïðàâëÿòü â âèäå ìàññèâà äàæå åñëè îäèí ýëåìåíò)
+                           //[Authorize]
+    public async Task<IActionResult> CreateUser([FromBody] UserRequest user)
     {
-        if (requests == null || !requests.Any())
-            return BadRequest("No users provided");
-
-        
-        var response = new List<string>();
-        foreach (var request in requests)
+        try
         {
-            response.Add($"User {request.lastName} {request.firstName} registered");
-        }
+            if (await _context.Users.AnyAsync(u => u.Login == user.login))
+            {
+                return Conflict("Пользователь с таким логином уже существует");
+            }
 
-        return Ok(response);
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(user.password);
+
+            var newUser = new User
+            {
+                UserId = user.id,
+                LastName = user.lastName,
+                FirstName = user.firstName,
+                Surname = user.surname,
+                Login = user.login,
+                PasswordHash = passwordHash,
+                Role = user.role,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = user.createdBy
+            };
+
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
+
+            // Возвращаем 201 Created с URL в заголовке Location
+            return Created($"/api/user/get/{newUser.UserId}", new
+            {
+                newUser.UserId,
+                newUser.Login,
+                newUser.Role,
+                newUser.FirstName,
+                newUser.LastName
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+        }
     }
     [HttpPut("update")] // http://localhost:5131/api/user/update
     public IActionResult update_user([FromBody] UserRequest request)
@@ -71,7 +105,7 @@ public class UserController : ControllerBase
         if (request == null)
             return BadRequest("Error accepting data, data is null");
 
-        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly updated"); // îáíîâëåíèå user-a
+        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly updated"); // update user
     }
     [HttpDelete("delete")] // http://localhost:5131/api/user/delete
     public IActionResult delete_user([FromBody] UserRequest request)
@@ -79,7 +113,7 @@ public class UserController : ControllerBase
         if (request == null)
             return BadRequest("Error accepting data, data is null");
 
-        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly deleted"); // óäàëåíèå user-a
+        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly deleted"); // delete user
     }
 }
 
