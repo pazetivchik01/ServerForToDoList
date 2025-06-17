@@ -8,6 +8,7 @@ builder.Services.AddDbContext<ToDoContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         new MySqlServerVersion(new Version(8, 0, 30)) 
     ));
+builder.Logging.AddConsole().SetMinimumLevel(LogLevel.Debug);
 builder.Services.AddControllers();
 var app = builder.Build();
 app.MapControllers();
