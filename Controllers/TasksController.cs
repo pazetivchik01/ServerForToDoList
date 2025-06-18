@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
+using System;
 using System.Text.Json.Serialization;
 
 namespace ServerForToDoList.Controllers
@@ -20,11 +21,11 @@ namespace ServerForToDoList.Controllers
 
         // GET api/task/get/'id'
         [HttpGet("get/{id}")]
-        public IActionResult GetTaskById(int id)
+        public async Task<IActionResult> GetTaskByTaskIdAsync(int id)
         {
             try
             {
-                var task = _context.Tasks.FirstOrDefault(t => t.TaskId == id);
+                var task = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == id);
 
                 if (task == null)
                 {
@@ -40,101 +41,72 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        
-        [HttpGet("created-by/{userId}")]
-        public async Task<IActionResult> GetTasksCreatedByUserAsync(int userId)
-        {
-            try
-            {
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
-                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
-
-                var tasks = await _context.Tasks
-                    .Where(t => t.CreatedBy == userId)
-                    .OrderByDescending(t => t.CreatedAt)
-                    .ToListAsync();
-
-                return Ok(tasks.Select(t => Extensions.TaskExtensions.ToDto(t)));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Внутренняя ошибка сервера");
-            }
-        }
-
-        [HttpGet("assigned-to/{userId}")]
-        public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
-        {
-            try
-            {
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
-                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
-
-                var tasks = await _context.TaskAssignments
-                    .Where(ta => ta.UserId == userId)
-                    .Include(ta => ta.Task) 
-                    .Select(ta => ta.Task)
-                    .OrderByDescending(t => t.CreatedAt)
-                    .ToListAsync();
-
-                return Ok(tasks.Select(t => Extensions.TaskExtensions.ToDto(t)));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Внутренняя ошибка сервера");
-            }
-        }
-
-
         // POST api/task
         [HttpPost]
-        public IActionResult CreateTask([FromBody] TaskDTO jsTask)
-        {   
+        public async Task<IActionResult> CreateTaskAsync([FromBody] TaskDTO jsTask)
+        {
             try
             {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
+                await _context.Tasks.AddAsync(task);
+                await _context.SaveChangesAsync();
+
+                TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
+                return CreatedAtAction(
+                    actionName: nameof(GetTaskByTaskIdAsync),
+                    routeValues: new { id = responceTask.TaskId },
+                    value: responceTask
+                );
             }
-            
-            Model.Task task =Extensions.TaskExtensions.ToEntity(jsTask);
-            _context.Tasks.Add(task);
-            _context.SaveChanges();
-            TaskDTO responceTask= Extensions.TaskExtensions.ToDto(task);
-            return CreatedAtAction(
-                actionName: nameof(GetTaskById),
-                routeValues: new { id = responceTask.TaskId }, 
-                value: responceTask
-            );
-            }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
                 return StatusCode(500, "Произошла внутренняя ошибка сервера");
             }
-           
         }
 
         // PUT api/put/task/'id'
         [HttpPut("put/{id}")]
-        public IActionResult UpdateTask(int id, [FromBody] Model.Task updatedTask)
+        public async Task<IActionResult> UpdateTaskAsync(int id, [FromBody] TaskDTO updatedTask)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState); // 400 + ошибки валидации
-            }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
 
-            var existingTask = _context.Tasks.FirstOrDefault(t => t.TaskId == id);
-            if (existingTask == null)
+                var existingTask = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == id);
+                if (existingTask == null)
+                {
+                    return NotFound();
+                }
+
+                existingTask.Title = updatedTask.Title;
+                existingTask.Description = updatedTask.Description;
+                existingTask.DueDate = updatedTask.DueDate;
+                existingTask.DueTime = updatedTask.DueTime;
+                existingTask.StartDate = updatedTask.StartDate;
+                existingTask.IsImportant = updatedTask.IsImportant;
+                existingTask.TypeId = updatedTask.TypeId;
+                existingTask.Status = updatedTask.Status;
+                existingTask.CompletedAt = updatedTask.CompletedAt;
+                existingTask.IsConfirmed = updatedTask.IsConfirmed;
+
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch (Exception ex)
             {
-                return NotFound(); // 404
+                // Лучше логировать полную ошибку для отладки
+                return StatusCode(500, "Произошла внутренняя ошибка сервера");
             }
-            existingTask.Title = updatedTask.Title;
-            existingTask.Description = updatedTask.Description;
-            existingTask.Status = updatedTask.Status;
-            _context.SaveChanges();
-
-            return NoContent(); // 204
         }
     }
 
@@ -177,10 +149,9 @@ namespace ServerForToDoList.Controllers
         public DateTime? CompletedAt { get; set; }
 
         [JsonPropertyName("is_confirmed")]
-        public bool IsConfirmed {  get; set; }
+        public bool IsConfirmed { get; set; }
 
         public List<TaskAssignmentsDTO>? Assignments { get; set; }
-
 
     }
     public class TaskAssignmentsDTO
