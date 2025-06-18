@@ -14,7 +14,6 @@ using System.Text.Json.Serialization;
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    //Êîðî÷å, â program.cs çàäàåòñÿ êîíòåêñò ÁÄ, è îí, êàê ÿ ïîíÿë àâòîìàòè÷åñêè âñòðàèâàåòñÿ â êîíòðîëëû. Íî ÷òî áû èì ïîëüçîâàòüñÿ åãî íàäî ÿâíî îáúÿâèòü
     private readonly ToDoContext _context;
 
     public UserController(ToDoContext context)
@@ -24,21 +23,11 @@ public class UserController : ControllerBase
 
 
     [HttpGet("get/{id}")] // http://localhost:5131/api/user/get/number (number - ýòî id)
-    public async Task<IActionResult> GetUserByIdAsync(int id)//!!!!!!!!!!!!!!Íóæíî  âñå ìåòîäû â êîíòðîëàõ ñäåëàòü àñèíõðîííûìè !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    public async Task<IActionResult> GetUserByIdAsync(int id)
     {
         if(id <= 0)
             return BadRequest("Id is invalid");
-        //Ïîëó÷åíèå âñåõ ïîëüçîâàòåëåé â êîíñîëü ê ïðèìåðó.
-        //var userList = await UserRepository.GetUsersAsync(_context);
-        //var users = new StringBuilder();
-        //if (userList != null)
-        //{
-        //    foreach (var user in userList)
-        //    {
-        //        users.AppendLine($"{user.FirstName} {user.LastName} {user.Surname}");
-        //    }
-        //}
-        //Console.WriteLine(users.ToString());
+        
         return Ok($"User id: {id} succefuly returned"); // ïîëó÷åíèå user-a
     }
 
@@ -47,7 +36,6 @@ public class UserController : ControllerBase
     {
         try 
         {
-            // Ëîãèêà ïîëó÷åíèÿ ïîëüçîâàòåëåé
             return Ok();
         }
         catch (Exception ex)
@@ -117,7 +105,7 @@ public class UserController : ControllerBase
     }
 }
 
-public class UserRequest // json îòïðàâëÿòü â ñîîòâåòñòâèè ñ ïîðäêîì ïîëåé â êëàññå
+public class UserRequest // json 
 {
     [JsonPropertyName("user_id")]
     public int id { get; set; }
