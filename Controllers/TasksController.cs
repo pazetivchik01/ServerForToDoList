@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
+using ServerForToDoList.Repositories;
 using System;
 using System.Text.Json.Serialization;
 
@@ -25,7 +26,9 @@ namespace ServerForToDoList.Controllers
         {
             try
             {
-                var task = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == id);
+                var task = await _context.Tasks
+                    .Include(t => t.Assignments)
+                    .FirstOrDefaultAsync(t => t.TaskId == id);
 
                 if (task == null)
                 {
@@ -135,7 +138,9 @@ namespace ServerForToDoList.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var existingTask = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == id);
+                var existingTask = await _context.Tasks
+                    .Include(t => t.Assignments)
+                    .FirstOrDefaultAsync(t => t.TaskId == id);
                 if (existingTask == null)
                 {
                     return NotFound();
@@ -152,13 +157,23 @@ namespace ServerForToDoList.Controllers
                 existingTask.CompletedAt = updatedTask.CompletedAt;
                 existingTask.IsConfirmed = updatedTask.IsConfirmed;
 
+                if (updatedTask.Assignments != null&&updatedTask.Assignments.Count!=0) 
+                {
+                    await TaskAssignmentRepository.ProcessTaskAssignments( _context,existingTask, updatedTask.Assignments);
+                }
+
+
                 await _context.SaveChangesAsync();
 
-                return NoContent();
+                // Перезагружаем задачу с актуальными данными (включая назначения)
+                var refreshedTask = await _context.Tasks
+                    .Include(t => t.Assignments)
+                    .FirstOrDefaultAsync(t => t.TaskId == id);
+
+                return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
             }
             catch (Exception ex)
             {
-                // Лучше логировать полную ошибку для отладки
                 return StatusCode(500, "Произошла внутренняя ошибка сервера");
             }
         }

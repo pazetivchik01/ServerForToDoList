@@ -14,7 +14,6 @@ using System.Text.Json.Serialization;
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    //Êîðî÷å, â program.cs çàäàåòñÿ êîíòåêñò ÁÄ, è îí, êàê ÿ ïîíÿë àâòîìàòè÷åñêè âñòðàèâàåòñÿ â êîíòðîëëû. Íî ÷òî áû èì ïîëüçîâàòüñÿ åãî íàäî ÿâíî îáúÿâèòü
     private readonly ToDoContext _context;
 
     public UserController(ToDoContext context)
@@ -59,7 +58,6 @@ public class UserController : ControllerBase
     {
         try 
         {
-            // Ëîãèêà ïîëó÷åíèÿ ïîëüçîâàòåëåé
             return Ok();
         }
         catch (Exception ex)
@@ -128,7 +126,7 @@ public class UserController : ControllerBase
     }
 }
 
-public class UserRequest // json îòïðàâëÿòü â ñîîòâåòñòâèè ñ ïîðäêîì ïîëåé â êëàññå
+public class UserRequest // json 
 {
     [JsonPropertyName("user_id")]
     public int id { get; set; }
