@@ -51,11 +51,13 @@ namespace ServerForToDoList.Controllers
             try
             {
                 var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
-                if (!userExists) {
-                    return NotFound($"Пользователь с ID {userId} не найден"); }
+                if (!userExists)
+                {
+                    return NotFound($"Пользователь с ID {userId} не найден");
+                }
 
                 var tasks = await _context.Tasks
-                    .Include(t=>t.Assignments)
+                    .Include(t => t.Assignments)
                     .Where(t => t.CreatedBy == userId)
                     .OrderByDescending(t => t.CreatedAt)
                     .ToListAsync();
@@ -78,14 +80,14 @@ namespace ServerForToDoList.Controllers
 
                 var tasks = await _context.TaskAssignments
                 .Where(ta => ta.UserId == userId)
-                .Include(ta => ta.Task)  
-                .ThenInclude(t => t.Assignments)  
+                .Include(ta => ta.Task)
+                .ThenInclude(t => t.Assignments)
                 .Select(ta => ta.Task)
-                    .Distinct()  
+                    .Distinct()
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-                
+
                 var result = tasks.Select(t => Extensions.TaskExtensions.ToDto(t)).ToList();
 
                 return Ok(result);

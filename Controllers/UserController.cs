@@ -21,14 +21,36 @@ public class UserController : ControllerBase
         _context = context;
     }
 
-
-    [HttpGet("get/{id}")] // http://localhost:5131/api/user/get/number (number - ýòî id)
+    [Authorize(Roles = "admin,manager")]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetUserByIdAsync(int id)
     {
-        if(id <= 0)
-            return BadRequest("Id is invalid");
-        
-        return Ok($"User id: {id} succefuly returned"); // ïîëó÷åíèå user-a
+        try
+        {
+            if (id <= 0)
+                return BadRequest(new { Message = "ID must be a positive integer" });
+
+            var user = await _context.Users
+                .Where(u => u.UserId == id)
+                .Select(u => new
+                {
+                    u.Surname,
+                    u.FirstName,
+                    u.LastName,
+                    u.Login,
+                    u.Role
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return NotFound(new { Message = $"User with id {id} not found" });
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+        }
     }
 
     [HttpGet("getAll")] // http://localhost:5131/api/user/getAll 
@@ -44,18 +66,16 @@ public class UserController : ControllerBase
         }
     }
     [HttpPost("register")] // http://localhost:5131/api/user/register
-                           //[Authorize]
+    [Authorize(Roles = "admin,manager")]
     public async Task<IActionResult> CreateUser([FromBody] UserRequest user)
     {
         try
         {
             if (await _context.Users.AnyAsync(u => u.Login == user.login))
             {
-                return Conflict("Пользователь с таким логином уже существует");
+                return Conflict(new { Message = "Пользователь с таким логином уже существует" });
             }
-
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(user.password);
-
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var newUser = new User
             {
                 UserId = user.id,
@@ -63,24 +83,25 @@ public class UserController : ControllerBase
                 FirstName = user.firstName,
                 Surname = user.surname,
                 Login = user.login,
-                PasswordHash = passwordHash,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.password),
                 Role = user.role,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = user.createdBy
+                CreatedBy = int.Parse(userIdClaim.ToString())
             };
 
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
             // Возвращаем 201 Created с URL в заголовке Location
-            return Created($"/api/user/get/{newUser.UserId}", new
+            var answer = new
             {
-                newUser.UserId,
-                newUser.Login,
-                newUser.Role,
-                newUser.FirstName,
-                newUser.LastName
-            });
+                surname = newUser.Surname,
+                first_name = newUser.FirstName,
+                message = "Пользователь успешно создан"
+            };
+
+
+            return Created($"/api/user/get/{newUser.UserId}", answer);
         }
         catch (Exception ex)
         {
