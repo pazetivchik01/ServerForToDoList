@@ -41,6 +41,60 @@ namespace ServerForToDoList.Controllers
             }
         }
 
+        [HttpGet("created-by/{userId}")]
+        public async Task<IActionResult> GetTasksCreatedByUserAsync(int userId)
+        {
+
+            try
+            {
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                if (!userExists)
+                {
+                    return NotFound($"Пользователь с ID {userId} не найден");
+                }
+
+                var tasks = await _context.Tasks
+                    .Include(t => t.Assignments)
+                    .Where(t => t.CreatedBy == userId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(tasks.Select(t => Extensions.TaskExtensions.ToDto(t)));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        [HttpGet("assigned-to/{userId}")]
+        public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
+        {
+            try
+            {
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
+
+                var tasks = await _context.TaskAssignments
+                .Where(ta => ta.UserId == userId)
+                .Include(ta => ta.Task)
+                .ThenInclude(t => t.Assignments)
+                .Select(ta => ta.Task)
+                    .Distinct()
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+
+                var result = tasks.Select(t => Extensions.TaskExtensions.ToDto(t)).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
         // POST api/task
         [HttpPost]
         public async Task<IActionResult> CreateTaskAsync([FromBody] TaskDTO jsTask)
