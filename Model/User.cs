@@ -10,7 +10,7 @@ namespace ServerForToDoList.Model
         [Column("user_id")]
         public int UserId { get; set; }
 
-        [Required]
+        
         [StringLength(50)]
         [Column("last_name")]
         public string LastName { get; set; }
@@ -20,6 +20,7 @@ namespace ServerForToDoList.Model
         [Column("first_name")]
         public string FirstName { get; set; }
 
+        [Required]
         [StringLength(50)]
         [Column("surname")]
         public string? Surname { get; set; }
