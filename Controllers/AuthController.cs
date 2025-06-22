@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -94,4 +95,13 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+}
+
+public class LoginRequest
+{
+    [Required]
+    public string login { get; set; }
+
+    [Required]
+    public string password { get; set; }
 }
