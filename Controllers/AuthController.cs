@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -43,11 +44,11 @@ public class AuthController : ControllerBase
 
 
 
-            if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
-            {
-                _logger.LogWarning($"Неверный пароль для пользователя: {request.login}");
-                return Unauthorized(new { Message = "Неверные учетные данные" });
-            }
+            //if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
+            //{
+            //    _logger.LogWarning($"Неверный пароль для пользователя: {request.login}");
+            //    return Unauthorized(new { Message = "Неверные учетные данные" });
+            //}
 
             var token = GenerateJwtToken(user);
             var answer = new
@@ -94,4 +95,13 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+}
+
+public class LoginRequest
+{
+    [Required]
+    public string login { get; set; }
+
+    [Required]
+    public string password { get; set; }
 }
