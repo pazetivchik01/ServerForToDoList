@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
+using ServerForToDoList.Extensions;
 using ServerForToDoList.Model;
 using ServerForToDoList.Repositories;
 using System.Data;
@@ -20,6 +21,9 @@ public class UserController : ControllerBase
     {
         _context = context;
     }
+
+
+
 
     [Authorize(Roles = "admin,manager")]
     [HttpGet("{id}")]
@@ -65,6 +69,24 @@ public class UserController : ControllerBase
             return BadRequest("An unknown error occurred");
         }
     }
+
+    [HttpGet("getAllByCreator/{creatorId}")] 
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> GetAllUsersByCreator(int creatorId)
+    {
+        try
+        {
+            var users = await UserRepository.GetAllUserByIdCreatedAsync(_context, creatorId);
+            var usersResponse = users.Select(UserExtensions.ConvertToUserRequest).ToList();
+            return Ok(usersResponse);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+
     [HttpPost("register")] // http://localhost:5131/api/user/register
     [Authorize(Roles = "admin,manager")]
     public async Task<IActionResult> CreateUser([FromBody] UserRequest user)
@@ -108,6 +130,8 @@ public class UserController : ControllerBase
             return StatusCode(500, "Произошла внутренняя ошибка сервера");
         }
     }
+
+
     [HttpPut("update")] // http://localhost:5131/api/user/update
     public IActionResult update_user([FromBody] UserRequest request)
     {
