@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Repositories;
@@ -19,9 +20,8 @@ namespace ServerForToDoList.Controllers
         }
 
 
-
-        // GET api/task/get/'id'
-        [HttpGet("get/{id}")]
+        // GET api/task/taskId
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskByTaskIdAsync(int id)
         {
             try
@@ -44,6 +44,8 @@ namespace ServerForToDoList.Controllers
             }
         }
 
+        //Get api/task/created-by/userId
+        [Authorize(Roles = "admin,manager")]
         [HttpGet("created-by/{userId}")]
         public async Task<IActionResult> GetTasksCreatedByUserAsync(int userId)
         {
@@ -70,6 +72,8 @@ namespace ServerForToDoList.Controllers
             }
         }
 
+        //Get api/task/assigned-to/userId
+        [Authorize]
         [HttpGet("assigned-to/{userId}")]
         public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
         {
@@ -99,6 +103,7 @@ namespace ServerForToDoList.Controllers
         }
 
         // POST api/task
+        [Authorize(Roles = "admin,manager")]
         [HttpPost]
         public async Task<IActionResult> CreateTaskAsync([FromBody] TaskDTO jsTask)
         {
@@ -114,11 +119,7 @@ namespace ServerForToDoList.Controllers
                 await _context.SaveChangesAsync();
 
                 TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
-                return CreatedAtAction(
-                    actionName: nameof(GetTaskByTaskIdAsync),
-                    routeValues: new { id = responceTask.TaskId },
-                    value: responceTask
-                );
+                return Ok(responceTask);
             }
             catch (Exception ex)
             {
@@ -127,9 +128,10 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        // PUT api/put/task/'id'
-        [HttpPut("put/{id}")]
-        public async Task<IActionResult> UpdateTaskAsync(int id, [FromBody] TaskDTO updatedTask)
+        // PUT api/task
+        [Authorize(Roles = "admin,manager")]
+        [HttpPut]
+        public async Task<IActionResult> UpdateTaskAsync( [FromBody] TaskDTO updatedTask)
         {
             try
             {
@@ -140,7 +142,7 @@ namespace ServerForToDoList.Controllers
 
                 var existingTask = await _context.Tasks
                     .Include(t => t.Assignments)
-                    .FirstOrDefaultAsync(t => t.TaskId == id);
+                    .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
                 if (existingTask == null)
                 {
                     return NotFound();
@@ -168,7 +170,7 @@ namespace ServerForToDoList.Controllers
                 // Перезагружаем задачу с актуальными данными (включая назначения)
                 var refreshedTask = await _context.Tasks
                     .Include(t => t.Assignments)
-                    .FirstOrDefaultAsync(t => t.TaskId == id);
+                    .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
 
                 return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
             }
@@ -177,6 +179,79 @@ namespace ServerForToDoList.Controllers
                 return StatusCode(500, "Произошла внутренняя ошибка сервера");
             }
         }
+
+        // Patch api/task/id
+        [Authorize]
+        [HttpPatch("confirmed/{taskId}")]
+        public async Task<IActionResult> ConfirmedTaskAsync([FromBody] bool flag,int taskId)
+        {
+            try
+            {
+                var task = await _context.Tasks.FindAsync(taskId);
+                if (task == null)
+                {
+                    return NotFound($"Задача с ID {taskId} не найдена.");
+                }
+                task.IsConfirmed= flag;
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Произошла внутренняя ошибка сервера");
+            }
+        }
+
+        // Patch api/task/id
+        [Authorize(Roles = "admin,manager")]
+        [HttpPatch("status/{taskId}")]
+        public async Task<IActionResult> ComplitedTaskAsync(int taskId)
+        {
+            try
+            {
+                var task = await _context.Tasks.FindAsync(taskId);
+                if (task == null)
+                {
+                    return NotFound($"Задача с ID {taskId} не найдена.");
+                }
+                if (!task.IsConfirmed)
+                {
+                    return UnprocessableEntity($"Нельзя сделать задачу выполненной, если она не завершенна исполнителем.");
+                }
+                task.Status = true;
+                task.CompletedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Произошла внутренняя ошибка сервера");
+            }
+        }
+
+        // Delete api/task/id
+        [Authorize(Roles = "admin,manager")]
+        [HttpDelete("{taskId}")]
+        public async Task<IActionResult> DeleteTask(int taskId)
+        {
+            try
+            {
+                var task = await _context.Tasks.FindAsync(taskId);
+                if (task == null)
+                {
+                    return NotFound($"Задача с ID {taskId} не найдена.");
+                }
+                _context.Tasks.Remove(task);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Произошла внутренняя ошибка сервера");
+            }
+        }
+
+
     }
 
     public class TaskDTO
