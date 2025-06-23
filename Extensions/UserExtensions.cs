@@ -42,7 +42,8 @@ namespace ServerForToDoList.Extensions
                 login = user.Login,
                 password = user.PasswordHash,
                 role = user.Role,
-                createdBy = user.CreatedBy
+                createdBy = user.CreatedBy,
+                deletedAt = user.DeletedAt
             };
         }
     }
