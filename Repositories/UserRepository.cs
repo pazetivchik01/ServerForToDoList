@@ -35,20 +35,32 @@ namespace ServerForToDoList.Repositories
         public static async Task<List<User>> GetAllUserByIdCreatedAsync(ToDoContext context, int creatorId)
         {
             var result = new List<User>();
+            var visited = new HashSet<int>();
             var queue = new Queue<int>();
             queue.Enqueue(creatorId);
+
+            var creator = await context.Users.FirstOrDefaultAsync(u => u.UserId == creatorId);
+            if (creator != null)
+            {
+                result.Add(creator);
+                visited.Add(creatorId);
+            }
 
             while (queue.Count > 0)
             {
                 var currentCreatorId = queue.Dequeue();
+
                 var directUsers = await context.Users
                     .Where(u => u.CreatedBy == currentCreatorId)
                     .ToListAsync();
 
                 foreach (var user in directUsers)
                 {
-                    result.Add(user);
-                    queue.Enqueue(user.UserId);
+                    if (visited.Add(user.UserId)) 
+                    {
+                        result.Add(user);
+                        queue.Enqueue(user.UserId);
+                    }
                 }
             }
 
