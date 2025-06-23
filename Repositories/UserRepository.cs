@@ -62,6 +62,7 @@ namespace ServerForToDoList.Repositories
         {
             context.Users.Update(user);
             await context.SaveChangesAsync();
+            
         }
         #endregion
 
@@ -77,11 +78,11 @@ namespace ServerForToDoList.Repositories
             }
         }
 
-        //Удаление пользователя(sofr-delte)
-        public static async void SoftDeleteUserAsync(ToDoContext context, int userId)
+        //Удаление пользователя(soft-delte)
+        public static async System.Threading.Tasks.Task SoftDeleteUserAsync(ToDoContext context, int userId)
         {
            var user = await context.Users.FindAsync(userId);
-           user.DeletedAt= DateTime.Now;
+           user.DeletedAt = DateTime.Now;
            await context.SaveChangesAsync();
         }
         #endregion
