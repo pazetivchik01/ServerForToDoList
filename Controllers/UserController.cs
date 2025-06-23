@@ -25,64 +25,21 @@ public class UserController : ControllerBase
 
 
 
+    [HttpGet("getAllByCreator")] 
     [Authorize(Roles = "admin,manager")]
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserByIdAsync(int id)
+    public async Task<IActionResult> GetAllUsersByCreator()
     {
         try
         {
-            if (id <= 0)
-                return BadRequest(new { Message = "ID must be a positive integer" });
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var user = await _context.Users
-                .Where(u => u.UserId == id)
-                .Select(u => new
-                {
-                    u.Surname,
-                    u.FirstName,
-                    u.LastName,
-                    u.Login,
-                    u.Role
-                })
-                .FirstOrDefaultAsync();
-
-            if (user == null)
-                return NotFound(new { Message = $"User with id {id} not found" });
-
-            return Ok(user);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, "Произошла внутренняя ошибка сервера");
-        }
-    }
-
-    [HttpGet("getAll")] // http://localhost:5131/api/user/getAll 
-    public IActionResult GetAllUser()
-    {
-        try 
-        {
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            return BadRequest("An unknown error occurred");
-        }
-    }
-
-    [HttpGet("getAllByCreator/{creatorId}")] 
-    [Authorize(Roles = "admin,manager")]
-    public async Task<IActionResult> GetAllUsersByCreator(int creatorId)
-    {
-        try
-        {
-            var users = await UserRepository.GetAllUserByIdCreatedAsync(_context, creatorId);
+            var users = await UserRepository.GetAllUserByIdCreatedAsync(_context, int.Parse(userIdClaim.ToString()));
             var usersResponse = users.Select(UserExtensions.ConvertToUserRequest).ToList();
             return Ok(usersResponse);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Internal server error");
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
         }
     }
 
@@ -111,8 +68,7 @@ public class UserController : ControllerBase
                 CreatedBy = int.Parse(userIdClaim.ToString())
             };
 
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
+            await UserRepository.AddUserAsync(_context, newUser);
 
             // Возвращаем 201 Created с URL в заголовке Location
             var answer = new
@@ -127,26 +83,71 @@ public class UserController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
         }
     }
 
 
     [HttpPut("update")] // http://localhost:5131/api/user/update
-    public IActionResult update_user([FromBody] UserRequest request)
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> update_user([FromBody] UserRequest request)
     {
-        if (request == null)
-            return BadRequest("Error accepting data, data is null");
 
-        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly updated"); // update user
+        try
+        {
+            var user = await _context.Users
+                .Where(u => u.UserId == request.id)
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return NotFound(new { Message = $"User with id {request.id} not found" });
+                        
+            user.FirstName = request.firstName;
+            user.Surname = request.surname;
+            user.Login = request.login;
+            user.LastName = request.lastName;
+            if(request.password != string.Empty)
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.password);
+            }
+            user.Role = request.role;
+            
+            await UserRepository.UpdateUserAsync(_context, user);
+            return Ok($"Данные пользователя {user.Surname} {user.FirstName} {user.LastName} успешно изменены"); // update user
+
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
+        }
+
     }
-    [HttpDelete("delete")] // http://localhost:5131/api/user/delete
-    public IActionResult delete_user([FromBody] UserRequest request)
+    [HttpPut("softDelete")] // http://localhost:5131/api/user/softDelete
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> delete_user([FromBody] UserRequest request)
     {
-        if (request == null)
-            return BadRequest("Error accepting data, data is null");
+        try
+        {
+            if (request.id > 0)
+            {
+                await UserRepository.SoftDeleteUserAsync(_context, request.id);
+                var user = await _context.Users
+                .Where(u => u.UserId == request.id)
+                .FirstOrDefaultAsync();
+                var mes = new
+                {
+                    surname = user.Surname,
+                    first_name = user.FirstName
+                };
+                return Ok(mes); // delete user
+            }
 
-        return Ok($"User: {request.lastName} {request.firstName} {request.surname} succefuly deleted"); // delete user
+            return BadRequest(new { Message = "Ошибка при получении данных" });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
+        }
     }
 }
 
@@ -157,15 +158,15 @@ public class UserRequest // json
     [JsonPropertyName("last_name")]
     public string? lastName { get; set; }
     [JsonPropertyName("first_name")]
-    public string firstName { get; set; }
+    public string? firstName { get; set; }
     [JsonPropertyName("surname")]
-    public string surname { get; set; }
+    public string? surname { get; set; }
     [JsonPropertyName("login")]
-    public string login { get; set; }
+    public string? login { get; set; }
     [JsonPropertyName("password_hash")]
-    public string password { get; set; }
+    public string? password { get; set; }
     [JsonPropertyName("role")]
-    public string role { get; set; }
+    public string? role { get; set; }
     [JsonPropertyName("created_by")]
     public int? createdBy { get; set; }
 }
