@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Repositories;
 using System;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 namespace ServerForToDoList.Controllers
@@ -44,23 +45,25 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        //Get api/task/created-by/userId
+        //Get api/task/created-by
         [Authorize(Roles = "admin,manager")]
-        [HttpGet("created-by/{userId}")]
-        public async Task<IActionResult> GetTasksCreatedByUserAsync(int userId)
+        [HttpGet("created-by")]
+        public async Task<IActionResult> GetTasksCreatedByUserAsync()
         {
 
             try
             {
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null) throw new Exception();
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == int.Parse(userId.ToString()));
                 if (!userExists)
                 {
-                    return NotFound($"Пользователь с ID {userId} не найден");
+                    return NotFound($"Пользователь с ID {userId.ToString()} не найден");
                 }
 
                 var tasks = await _context.Tasks
                     .Include(t => t.Assignments)
-                    .Where(t => t.CreatedBy == userId)
+                    .Where(t => t.CreatedBy == int.Parse(userId.ToString()))
                     .OrderByDescending(t => t.CreatedAt)
                     .ToListAsync();
 
@@ -72,18 +75,20 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        //Get api/task/assigned-to/userId
+        //Get api/task/assigned-to
         [Authorize]
-        [HttpGet("assigned-to/{userId}")]
-        public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
+        [HttpGet("assigned-to")]
+        public async Task<IActionResult> GetTasksAssignedToUserAsync()
         {
             try
             {
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null) throw new Exception();
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == int.Parse(userId.ToString()));
                 if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
 
                 var tasks = await _context.TaskAssignments
-                .Where(ta => ta.UserId == userId)
+                .Where(ta => ta.UserId == int.Parse(userId.ToString()))
                 .Include(ta => ta.Task)
                 .ThenInclude(t => t.Assignments)
                 .Select(ta => ta.Task)
@@ -180,7 +185,7 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        // Patch api/task/id
+        // Patch api/task/confirmed/id
         [Authorize]
         [HttpPatch("confirmed/{taskId}")]
         public async Task<IActionResult> ConfirmedTaskAsync([FromBody] bool flag,int taskId)
@@ -202,7 +207,7 @@ namespace ServerForToDoList.Controllers
             }
         }
 
-        // Patch api/task/id
+        // Patch api/task/status/id
         [Authorize(Roles = "admin,manager")]
         [HttpPatch("status/{taskId}")]
         public async Task<IActionResult> ComplitedTaskAsync(int taskId)

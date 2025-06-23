@@ -15,6 +15,9 @@ namespace ServerForToDoList.Model
         [Column("type_name")]
         public string TypeName { get; set; }
 
+        [Column("is_accessible")]
+        public bool IsAccessible { get; set; } = true;
+
         // Навигационное свойство
         public ICollection<Task> Tasks { get; set; }
     }
