@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ServerForToDoList.Model
 {
+    [Table("task_types")]
     public class TaskType
     {
         [Key]

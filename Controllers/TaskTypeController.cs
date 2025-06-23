@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
+using System.Text.Json.Serialization;
 
 namespace ServerForToDoList.Controllers
 {
@@ -17,6 +19,7 @@ namespace ServerForToDoList.Controllers
         }
 
         // GET api/tasktype
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<List<TaskTypeDto>>> GetAll()
         {
@@ -32,6 +35,7 @@ namespace ServerForToDoList.Controllers
         }
 
         // POST api/tasktype
+        [Authorize(Roles = "admin")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] string typeName)
         {
@@ -56,6 +60,7 @@ namespace ServerForToDoList.Controllers
         }
 
         // PUT api/tasktype/{id}
+        [Authorize(Roles = "admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] string newTypeName)
         {
@@ -79,6 +84,7 @@ namespace ServerForToDoList.Controllers
         }
 
         // PATCH api/tasktype/{id}
+        [Authorize(Roles = "admin")]
         [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateAccessibility(int id, [FromBody] bool isAccessible)
         {
@@ -94,8 +100,13 @@ namespace ServerForToDoList.Controllers
 
     public class TaskTypeDto
     {
+        [JsonPropertyName("type_id")]
         public int TypeId { get; set; }
+
+        [JsonPropertyName("type_name")]
         public string TypeName { get; set; }
+
+        [JsonPropertyName("is_accessible")]
         public bool IsAccessible { get; set; }
     }
 }
