@@ -32,7 +32,6 @@ public class UserController : ControllerBase
         try
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             var users = await UserRepository.GetAllUserByIdCreatedAsync(_context, int.Parse(userIdClaim.ToString()));
             var usersResponse = users.Select(UserExtensions.ConvertToUserRequest).ToList();
             return Ok(usersResponse);
