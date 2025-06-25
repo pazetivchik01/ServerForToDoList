@@ -5,6 +5,7 @@ using ServerForToDoList.DBContext;
 using ServerForToDoList.Extensions;
 using ServerForToDoList.Model;
 using ServerForToDoList.Repositories;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Security.Claims;
 using System.Text;
@@ -21,10 +22,6 @@ public class UserController : ControllerBase
     {
         _context = context;
     }
-
-
-
-
     [HttpGet("getAllByCreator")] 
     [Authorize(Roles = "admin,manager")]
     public async Task<IActionResult> GetAllUsersByCreator()
@@ -168,4 +165,6 @@ public class UserRequest // json
     public string? role { get; set; }
     [JsonPropertyName("created_by")]
     public int? createdBy { get; set; }
+    [JsonPropertyName("deleted_at")]
+    public DateTime? deletedAt { get; set; }
 }
