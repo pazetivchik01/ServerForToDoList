@@ -22,6 +22,44 @@ public class UserController : ControllerBase
     {
         _context = context;
     }
+
+    [HttpGet("get/{id}")] // http://localhost:5131/api/user/get/1
+    [Authorize]
+    public async Task<IActionResult> GetUserById(int id)
+    {
+        try
+        {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+            var user = await _context.Users
+                .Where(u => u.UserId == id )
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound(new { Message = $"Пользователь с ID {id} не найден или у вас нет доступа" });
+            }
+
+            var userResponse = new UserRequest
+            {
+                id = user.UserId,
+                lastName = user.LastName,
+                firstName = user.FirstName,
+                surname = user.Surname,
+                login = user.Login,
+                role = user.Role,
+                createdBy = user.CreatedBy,
+                deletedAt = user.DeletedAt
+            };
+
+            return Ok(userResponse);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
+        }
+    }
+
     [HttpGet("getAllByCreator")] 
     [Authorize(Roles = "admin,manager")]
     public async Task<IActionResult> GetAllUsersByCreator()

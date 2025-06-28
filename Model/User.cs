@@ -20,7 +20,7 @@ namespace ServerForToDoList.Model
         [Column("first_name")]
         public string FirstName { get; set; }
 
-        [Required]
+       
         [StringLength(50)]
         [Column("surname")]
         public string? Surname { get; set; }
