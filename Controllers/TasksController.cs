@@ -107,6 +107,37 @@ namespace ServerForToDoList.Controllers
             }
         }
 
+        //Get api/task/assigned-to/id
+        [Authorize]
+        [HttpGet("assigned-to/{userId}")]
+        public async Task<IActionResult> GetTasksAssignedToUserAsync(int userId)
+        {
+            try
+            {
+                if (userId == null) throw new Exception();
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == int.Parse(userId.ToString()));
+                if (!userExists) return NotFound($"Пользователь с ID {userId} не найден");
+
+                var tasks = await _context.TaskAssignments
+                .Where(ta => ta.UserId == int.Parse(userId.ToString()))
+                .Include(ta => ta.Task)
+                .ThenInclude(t => t.Assignments)
+                .Select(ta => ta.Task)
+                    .Distinct()
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+
+                var result = tasks.Select(t => Extensions.TaskExtensions.ToDto(t)).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
         // POST api/task
         [Authorize(Roles = "admin,manager")]
         [HttpPost]
