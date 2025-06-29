@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ServerForToDoList.DBContext;
 using System.Text;
@@ -32,6 +33,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 builder.Services.AddControllers();
 var app = builder.Build();
+app.UseStaticFiles(); 
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Help", "images")),
+    RequestPath = "/images"
+});
 app.MapControllers();
 app.MapGet("/", () => "Hello World!");
 app.Run();

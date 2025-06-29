@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Руководство пользователя ToDoList</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-left: 4px solid #3498db;
+            margin-top: 30px;
+        }
+        
+        .nav-sidebar {
+            width: 250px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+            border-right: 1px solid #ddd;
+        }
+        
+        .nav-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+    
+        .nav-sidebar li {
+            margin-bottom: 8px;
+        }
+    
+        .nav-sidebar a {
+            display: block;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #2c3e50;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+    
+        .nav-sidebar a:hover {
+            background-color: #e9ecef;
+            border-left: 3px solid #3498db;
+        }
+        
+        .nav-sidebar a.active {
+            background-color: #e9ecef;
+            border-left: 3px solid #3498db;
+            font-weight: bold;
+        }
+        
+        .content {
+            margin-left: 290px;
+            padding: 20px;
+            max-width: 800px;
+        }
+        
+        .screenshot {
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: white;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 100%;
+        }
+        
+        .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 20px;
+        background-color: #3498db;
+        color: white;
+        text-decoration: none;
+        border-radius: 15px;
+        transition: background-color 0.3s;
+        font-family: Arial, sans-serif;
+        }
+  
+        .btn:hover {
+            background-color: #1e577c;
+        }
+        
+            .btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            margin: 5px 0;
+        }
+        
+        .feature-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .requirements-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+        }
+        
+        .requirements-table th, 
+        .requirements-table td {
+            padding: 15px;  /* Увеличиваем отступы */
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .requirements-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            min-width: 200px;  /* Ширина первой колонки */
+        }
+        
+        .requirements-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .requirements-table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* Для мобильных устройств */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            .nav-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-sidebar">
+        <ul>
+            <li><a href="#about">О программе</a></li>
+            <li><a href="#requirements">Требования</a></li>
+            <li><a href="#structure" class="active">Структура интерфейса</a></li>
+            <li><a href="#navigation">Навигационное меню</a></li>
+            <li><a href="#assignments">Поручения</a></li>
+            <li><a href="#my-tasks">Мои задачи</a></li>
+            <li><a href="#statistics">Статистика</a></li>
+            <li><a href="#employees">Сотрудники</a></li>
+            <li><a href="#profile">Мой профиль</a></li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <h1>Руководство пользователя ToDoList</h1>
+        
+         <section id="about">
+            <h2>О программе</h2>
+            <div class="feature-box">
+                <h3>ToDoList - система управления задачами</h3>
+                <p><strong>Версия:</strong> 1.0.0-alpfa</p>
+                <p><strong>Дата выпуска:</strong> 2025</p>
+                <p><strong>Разработчик: </strong> <a href="https://github.com/Troower" class="btn" target="_blank"
+                                                        ><svg viewBox="0 0 24 24">
+                                                             <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                                                         </svg>Troower</a> </p>
+                
+                <h4>Архитектура системы:</h4>
+                <ul>
+                    <li><strong>Клиентское приложение:</strong> WPF (.NET 8)</li>
+                    <li><strong>Серверная часть:</strong> ASP.NET Core 9, разрабатывалось вместе с  <a href="https://github.com/pazetivchik01" class="btn" target="_blank">
+                                                                                                            <svg viewBox="0 0 24 24">
+                                                                                                                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                                                                                                            </svg>
+  TiV4enko </a>  </li>
+                    <li><strong>База данных:</strong> MySQL 8.0.30</li>
+                    <li><strong>ORM:</strong> Entity Framework Core</li>
+                    <li><strong>API:</strong> RESTful сервис для взаимодействия клиента и сервера</li>
+                </ul>
+                
+                <h4>Основные возможности:</h4>
+                <ul>
+                    <li>Создание и назначение задач сотрудникам</li>
+                    <li>Отслеживание выполнения задач</li>
+                    <li>Просмотр статистики по задачам</li>
+                    <li>Управление учетными записями сотрудников</li>
+                    <li>Интуитивно понятный интерфейс</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="requirements">
+            <h2>Требования к системе</h2>
+            <div class="feature-box">
+                <h3>Требования к клиентскому приложению</h3>
+                <table class="requirements-table">
+                    <tr>
+                        <th>Компонент</th>
+                        <th>Минимальные требования</th>
+                        <th>Рекомендуемые требования</th>
+                    </tr>
+                    <tr>
+                        <td>Операционная система</td>
+                        <td>Windows 10 (версия 1809 или новее)</td>
+                        <td>Windows 10/11 (последняя версия)</td>
+                    </tr>
+                    <tr>
+                        <td>Процессор</td>
+                        <td>1 ГГц или быстрее, 2 ядра</td>
+                        <td>2 ГГц, 4 ядра</td>
+                    </tr>
+                    <tr>
+                        <td>Оперативная память</td>
+                        <td>2 ГБ</td>
+                        <td>4 ГБ или более</td>
+                    </tr>
+                    <tr>
+                        <td>Место на диске</td>
+                        <td>200 МБ свободного пространства</td>
+                        <td>500 МБ свободного пространства</td>
+                    </tr>
+                    <tr>
+                        <td>Дополнительно</td>
+                        <td>.NET 8 Desktop Runtime</td>
+                        <td>.NET 8 Desktop Runtime, разрешение экрана 1920×1080</td>
+                    </tr>
+                </table>
+                
+                <h3>Требования к серверной части</h3>
+                <table class="requirements-table">
+                    <tr>
+                        <th>Компонент</th>
+                        <th>Минимальные требования</th>
+                        <th>Рекомендуемые требования</th>
+                    </tr>
+                    <tr>
+                        <td>Операционная система</td>
+                        <td>Windows Server 2016 / Linux (Ubuntu 20.04+)</td>
+                        <td>Windows Server 2022 / Linux (Ubuntu 22.04 LTS)</td>
+                    </tr>
+                    <tr>
+                        <td>Процессор</td>
+                        <td>2 ядра, 2 ГГц</td>
+                        <td>4 ядра, 3 ГГц или лучше</td>
+                    </tr>
+                    <tr>
+                        <td>Оперативная память</td>
+                        <td>4 ГБ</td>
+                        <td>8 ГБ или более</td>
+                    </tr>
+                    <tr>
+                        <td>Место на диске</td>
+                        <td>10 ГБ (SSD рекомендовано)</td>
+                        <td>50 ГБ SSD</td>
+                    </tr>
+                    <tr>
+                        <td>СУБД</td>
+                        <td>MySQL 8.0.30</td>
+                        <td>MySQL 8.0.30+ с SSD хранилищем</td>
+                    </tr>
+                    <tr>
+                        <td>Дополнительно</td>
+                        <td>.NET 9 Runtime</td>
+                        <td>.NET 9 Runtime, выделенный сервер</td>
+                    </tr>
+                </table>
+                
+                <h3>Сетевые требования</h3>
+                <ul>
+                    <li><strong>Клиент-серверное взаимодействие:</strong> HTTP</li>
+                    <li><strong>Пропускная способность:</strong> минимум 10 Мбит/с для 50+ одновременных пользователей</li>
+                    <li><strong>Задержка:</strong> рекомендуется менее 100 мс между клиентом и сервером</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="structure">
+            <h2>Структура интерфейса</h2>
+            <div class="feature-box">
+                <p>Приложение состоит из двух основных областей:</p>
+                <ol>
+                    <li><strong>Выдвижная панель</strong> (слева) с кнопками навигации</li>
+                    <li><strong>Рабочее пространство</strong> (справа) для отображения содержимого выбранной вкладки</li>
+                </ol>
+                <img src="/images/main-screen.png" alt="Главный экран приложения" class="screenshot">
+            </div>
+        </section>
+        
+        <section id="navigation">
+            <h2>Навигационное меню</h2>
+            <div class="feature-box">
+                <p>Панель навигации содержит следующие кнопки:</p>
+                <ul>
+                    <li>📋 <strong>Поручения</strong> - управление задачами</li>
+                    <li>✅ <strong>Мои задачи</strong> - просмотр назначенных задач</li>
+                    <li>📊 <strong>Статистика</strong> - аналитика по задачам</li>
+                    <li>👥 <strong>Сотрудники</strong> - управление сотрудниками</li>
+                    <li>👤 <strong>Мой профиль</strong> - информация о пользователе</li>
+                    <li>🚪 <strong>Выход</strong> - завершение сеанса</li>
+                </ul>
+            </div>
+        </section>
+        
+        <section id="assignments">
+            <h2>Поручения</h2>
+            <div class="feature-box">
+                <p>Раздел позволяет управлять задачами:</p>
+                <ul>
+                    <li>Просмотр списка всех назначенных задач</li>
+                    <li>Для каждой задачи доступны действия:
+                        <ul>
+                            <li><span class="button">✏️ Редактировать</span> - открывает окно редактирования</li>
+                            <li><span class="button">🗑️ Удалить</span> - удаляет задачу</li>
+                            <li><span class="button">➕ Создать задачу</span> - создание новой задачи</li>
+                        </ul>
+                    </li>
+                </ul>
+                <img src="/images/assignments.png" alt="Экран назначений" class="screenshot">
+            </div>
+        </section>
+        
+        <section id="my-tasks">
+            <h2>Мои задачи</h2>
+            <div class="feature-box">
+                <p>Отображает задачи, назначенные текущему пользователю:</p>
+                <ul>
+                    <li>Список задач с краткой информацией</li>
+                    <li>При выборе задачи отображается подробная информация</li>
+                    <li>Кнопка <span class="button">Завершить задачу</span> для отметки выполнения</li>
+                </ul>
+                <img src="/images/my-tasks.png" alt="Экран моих задач" class="screenshot">
+            </div>
+        </section>
+        
+        <section id="statistics">
+            <h2>Статистика</h2>
+            <div class="feature-box">
+                <p>Раздел содержит три круговые диаграммы:</p>
+                <ol>
+                    <li>Статистика по задачам, назначенным текущим сотрудником</li>
+                    <li>Статистика по задачам, назначенным текущему сотруднику</li>
+                    <li>Статистика по выбранному сотруднику (выбор из выпадающего списка)</li>
+                </ol>
+                <img src="/images/statistics.png" alt="Экран статистики" class="screenshot">
+            </div>
+        </section>
+        
+        <section id="employees">
+            <h2>Сотрудники</h2>
+            <div class="feature-box">
+                <p>Интерфейс управления сотрудниками:</p>
+                <ul>
+                    <li>Список всех сотрудников</li>
+                    <li>Кнопки действий:
+                        <ul>
+                            <li><span class="button">➕ Добавить</span> - создание нового сотрудника</li>
+                            <li><span class="button">✏️ Редактировать</span> - изменение данных сотрудника</li>
+                            <li><span class="button">🗑️ Удалить</span> - удаление сотрудника</li>
+                        </ul>
+                    </li>
+                </ul>
+                <img src="/images/employees.png" alt="Экран сотрудников" class="screenshot">
+            </div>
+        </section>
+        
+        <section id="profile">
+            <h2>Мой профиль</h2>
+            <div class="feature-box">
+                <p>Отображает информацию о текущем пользователе:</p>
+                <ul>
+                    <li>Имя, должность, контактные данные</li>
+                    <li>Кнопка <span class="button">Выйти из аккаунта</span> - завершает текущую сессию</li>
+                </ul>
+                <img src="/images/profile.png" alt="Экран профиля" class="screenshot">
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Добавляем подсветку активного раздела при прокрутке
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-sidebar a');
+            
+            window.addEventListener('scroll', function() {
+                let current = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    
+                    if (pageYOffset >= (sectionTop - 100)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        });
+        document.querySelectorAll('.nav-sidebar a').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetElement = document.querySelector(targetId);
+        
+        window.scrollTo({
+            top: targetElement.offsetTop - 20,
+            behavior: 'smooth'
+        });
+    });
+});
+    </script>
+</body>
+</html>
