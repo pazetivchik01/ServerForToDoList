@@ -149,12 +149,32 @@ namespace ServerForToDoList.Controllers
                 {
                     return BadRequest(ModelState);
                 }
+
                 
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
                 Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
+                task.CreatedBy = int.Parse(userIdClaim);
+
+                task.CreatedAt = DateTime.UtcNow;
+                if (task.Assignments != null)
+                {
+
+
+                    foreach (var assignment in task.Assignments)
+                    {
+                        assignment.AssignedAt = DateTime.UtcNow;
+                        assignment.AssignedBy = int.Parse(userIdClaim);
+                    }
+
+
+                }
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
 
                 TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
+
                 return Ok(responceTask);
             }
             catch (Exception ex)
@@ -286,8 +306,6 @@ namespace ServerForToDoList.Controllers
                 return StatusCode(500, "Произошла внутренняя ошибка сервера");
             }
         }
-
-
     }
 
     public class TaskDTO

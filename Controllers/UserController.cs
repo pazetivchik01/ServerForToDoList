@@ -147,7 +147,12 @@ public class UserController : ControllerBase
             user.Role = request.role;
             
             await UserRepository.UpdateUserAsync(_context, user);
-            return Ok($"Данные пользователя {user.Surname} {user.FirstName} {user.LastName} успешно изменены"); // update user
+            var answer = new
+            {
+                surname = user.Surname,
+                first_name = user.FirstName
+            };
+            return Ok(answer); // update user
 
         }
         catch (Exception)
