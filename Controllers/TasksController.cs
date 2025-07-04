@@ -149,7 +149,7 @@ namespace ServerForToDoList.Controllers
                 {
                     return BadRequest(ModelState);
                 }
-
+                
                 Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
