@@ -27,6 +27,38 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("validate")]
+    public IActionResult ValidateToken()
+    {
+        var authHeader = Request.Headers["Authorization"].ToString();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+        {
+            return Ok(false);
+        }
+
+        var token = authHeader["Bearer ".Length..].Trim();
+
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
+            }, out _);
+
+            return Ok(true);
+        }
+        catch
+        {
+            return Ok(false);
+        }
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
@@ -60,7 +92,9 @@ public class AuthController : ControllerBase
                     user.Login,
                     user.Role,
                     user.FirstName,
-                    user.LastName
+                    user.LastName,
+                    user.Surname,
+                    user.CreatedAt
                 }
             };
             return Ok(answer);
