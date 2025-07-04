@@ -149,7 +149,11 @@ namespace ServerForToDoList.Controllers
                 {
                     return BadRequest(ModelState);
                 }
+
+                
+
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
                 Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
                 task.CreatedBy = int.Parse(userIdClaim);
 
