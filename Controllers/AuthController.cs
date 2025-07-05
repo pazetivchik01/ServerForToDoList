@@ -74,6 +74,8 @@ public class AuthController : ControllerBase
                 return Unauthorized(mes);
             }
 
+            if (user.DeletedAt >= DateTime.UtcNow)
+                return BadRequest(new { Message = "Ваш аккаунт удалён, если это ошибка обратитесь к администратору" });
 
 
             if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
@@ -94,7 +96,7 @@ public class AuthController : ControllerBase
                     user.FirstName,
                     user.LastName,
                     user.Surname,
-                    user.CreatedAt
+                    user.CreatedAt,
                 }
             };
             return Ok(answer);
