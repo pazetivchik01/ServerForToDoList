@@ -14,10 +14,12 @@ namespace ServerForToDoList.Controllers
     public class TasksController : ControllerBase
     {
         private readonly ToDoContext _context;
+        private readonly FcmNotificationService _notificationService;
 
-        public TasksController(ToDoContext context)
+        public TasksController(ToDoContext context, FcmNotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
 
@@ -173,6 +175,16 @@ namespace ServerForToDoList.Controllers
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
 
+                var deviceTokens = await _context.UserDeviceTokens
+                     .Where(u => u.UserId == int.Parse(userIdClaim))
+                     .Select(u => u.DeviceToken)
+                     .ToListAsync();
+
+                foreach (var token in deviceTokens)
+                {
+                    await _notificationService.SendNotificationAsync(token, "Новая задача", $"Назначена новая задача: {jsTask.Title}");
+                }
+
                 TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
 
                 return Ok(responceTask);
@@ -215,9 +227,9 @@ namespace ServerForToDoList.Controllers
                 existingTask.CompletedAt = updatedTask.CompletedAt;
                 existingTask.IsConfirmed = updatedTask.IsConfirmed;
 
-                if (updatedTask.Assignments != null&&updatedTask.Assignments.Count!=0) 
+                if (updatedTask.Assignments != null && updatedTask.Assignments.Count != 0)
                 {
-                    await TaskAssignmentRepository.ProcessTaskAssignments( _context,existingTask, updatedTask.Assignments);
+                    await TaskAssignmentRepository.ProcessTaskAssignments(_context, existingTask, updatedTask.Assignments);
                 }
 
 
@@ -228,6 +240,31 @@ namespace ServerForToDoList.Controllers
                     .Include(t => t.Assignments)
                     .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
 
+                List<Model.TaskAssignment> oldTaskAssignments = (List<Model.TaskAssignment>)existingTask.Assignments;
+                List<Model.TaskAssignment> newTaskAssignments = (List<Model.TaskAssignment>)refreshedTask.Assignments;
+
+                var unionAssignments = oldTaskAssignments.Union(newTaskAssignments).ToList();
+
+                if (unionAssignments.Count != 0)
+                {
+                    List<int> userId = new List<int>();
+                    for (int i = 0; i < unionAssignments.Count; i++)
+                    {
+                        userId.Add(unionAssignments[i].UserId);
+                    }
+                    var deviceTokens = new List<string>();
+                    foreach (var id in userId)
+                    {
+                        deviceTokens = await _context.UserDeviceTokens
+                         .Where(u => u.UserId == id)
+                         .Select(u => u.DeviceToken)
+                         .ToListAsync();
+                    }
+                    foreach (var token in deviceTokens)
+                    {
+                        await _notificationService.SendNotificationAsync(token, "Новая задача", $"Вас добавили в новую задачу: {refreshedTask.Title}");
+                    }
+                }
                 return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
             }
             catch (Exception ex)

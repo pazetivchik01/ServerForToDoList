@@ -1,24 +1,31 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServerForToDoList.Controllers;
+using ServerForToDoList.DBContext;
+using ServerForToDoList.Model;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/device")]
 public class DeviceController : ControllerBase
 {
-    [HttpPost("register")] // http://localhost:5131/api/device/register
-    public IActionResult RegisterDevice([FromBody] DeviceRequest request)
+    private readonly ToDoContext _context;
+    private readonly DeviceTokenService _deviceService;
+    public DeviceController(ToDoContext context, DeviceTokenService deviceService)
     {
-        if (string.IsNullOrEmpty(request.Token))
-            return BadRequest("Token is required");
-
-        return Ok($"Device: {request.Device}, with token: {request.Token} succefuly registered"); // регистрация токена
+        _context = context;
+        _deviceService = deviceService;
     }
-    [HttpPut("update-token")] // http://localhost:5131/api/device/update-token
-    public IActionResult update_token([FromBody] DeviceRequest request)
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterDevice([FromBody] DeviceRequest request)
     {
         if (string.IsNullOrEmpty(request.Token))
             return BadRequest("Token is required");
-
-        return Ok($"Token: {request.Token}, device: {request.Device}, succefuly updated"); // обнавление токена
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var result = await _deviceService.RegisterOrUpdateTokenAsync(request, int.Parse(userIdClaim));
+        return Ok($"{result}: Device {request.Device}, token {request.Token}");
     }
     [HttpDelete("delete")] // http://localhost:5131/api/device/delete
     public IActionResult delete_token([FromBody] DeviceRequest request)
@@ -28,10 +35,13 @@ public class DeviceController : ControllerBase
 
         return Ok($"Token: {request.Token}, device: {request.Device}, succefuly deleted"); // удаление токена
     }
+
 }
 
 public class DeviceRequest
 {
+    [JsonPropertyName("token")]
     public string Token { get; set; }
+    [JsonPropertyName("device")]
     public string Device { get; set; }
 }

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ServerForToDoList.Model
 {
+    [Table("user_device_tokens")]
     public class UserDeviceToken
     {
         [Key]
