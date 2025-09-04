@@ -118,6 +118,7 @@ namespace ServerForToDoList.DBContext
                 .WithMany(u => u.DeviceTokens)
                 .HasForeignKey(udt => udt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+                
         }
     }
 }
