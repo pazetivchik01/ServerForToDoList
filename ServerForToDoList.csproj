@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Help\Guide.html" />
     <None Remove="Help\images\assignments.png" />
     <None Remove="Help\images\employees.png" />
     <None Remove="Help\images\main-screen.png" />
@@ -16,6 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Help\Guide.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Help\images\assignments.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

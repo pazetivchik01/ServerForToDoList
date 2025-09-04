@@ -77,6 +77,23 @@ public class UserController : ControllerBase
         }
     }
 
+    [HttpGet("UsersForManage")]
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> GetUsersForManage()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var users = await UserRepository.GetAllUserForManageAsync(_context, int.Parse(userIdClaim.ToString()));
+            var usersResponse = users.Select(UserExtensions.ConvertToUserRequest).ToList();
+            return Ok(usersResponse);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Произошла внутренняя ошибка сервера" });
+        }
+    }
+
 
     [HttpPost("register")] // http://localhost:5131/api/user/register
     [Authorize(Roles = "admin,manager")]
