@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 using ServerForToDoList.Controllers;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
@@ -21,19 +22,63 @@ public class DeviceController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> RegisterDevice([FromBody] DeviceRequest request)
     {
-        if (string.IsNullOrEmpty(request.Token))
-            return BadRequest("Token is required");
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var result = await _deviceService.RegisterOrUpdateTokenAsync(request, int.Parse(userIdClaim));
-        return Ok($"{result}: Device {request.Device}, token {request.Token}");
+        try
+        {
+            if (string.IsNullOrEmpty(request.Token))
+                return BadRequest("Token is required");
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var result = await _deviceService.RegisterOrUpdateTokenAsync(request, int.Parse(userIdClaim));
+            return Ok($"{result}: Device {request.Device}, token {request.Token}");
+        }
+        catch (DbUpdateException ex)
+        {
+            return StatusCode(409, "Your FCM Token already registered");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Произошла внутреняя ошибка сервера");
+        }
     }
-    [HttpDelete("delete")] // http://localhost:5131/api/device/delete
-    public IActionResult delete_token([FromBody] DeviceRequest request)
+    [HttpDelete("delete-by-user")] // http://localhost:5131/api/device/delete-by-user
+    public async Task<IActionResult> delete_token([FromBody] int id)
     {
-        if (string.IsNullOrEmpty(request.Token))
-            return BadRequest("Token is required");
+        try
+        {
+            var deletingTokens = await _context.UserDeviceTokens.Where(w => w.UserId == id).Select(t => t).ToListAsync();
 
-        return Ok($"Token: {request.Token}, device: {request.Device}, succefuly deleted"); // удаление токена
+            foreach (var delete in deletingTokens)
+            {
+                _context.UserDeviceTokens.Remove(delete);
+            }
+            _context.SaveChanges();
+            return Ok($"All user tokens succefuly deleted"); // удаление токена
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+        }
+    }
+    [HttpPut("delete-this-token")] // http://localhost:5131/api/device/delete-this-token
+    public async Task<IActionResult> delete_this_token([FromBody] DeviceRequest request)
+    {
+        try
+        {
+            if(string.IsNullOrEmpty(request.Token))
+                return BadRequest("Token is required");
+
+            var deletingToken = _context.UserDeviceTokens.Where(w => w.DeviceToken == request.Token).Select(t => t);
+
+            foreach (var delete in deletingToken)
+            {
+                _context.UserDeviceTokens.Remove(delete);
+            }
+            _context.SaveChanges();
+            return Ok($"Token succefuly deleted"); // удаление токена
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+        }
     }
 
 }
