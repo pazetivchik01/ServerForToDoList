@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MySqlConnector;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
 using ServerForToDoList.Repositories;
 using System;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 
@@ -188,7 +190,7 @@ namespace ServerForToDoList.Controllers
 
                 foreach (var token in deviceTokens)
                 {
-                    await _notificationService.SendNotificationAsync(token, "Новая задача", $"Назначена новая задача: {jsTask.Title}");
+                    await _notificationService.SendNotificationAsync(token, "Новая задача", $"Назначена новая задача: \"{jsTask.Title}\"");
                 }
 
                 TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
@@ -267,12 +269,16 @@ namespace ServerForToDoList.Controllers
                     }
                     foreach (var token in deviceTokens)
                     {
-                        await _notificationService.SendNotificationAsync(token, "Новая задача", $"Вас добавили в новую задачу: {refreshedTask.Title}");
+                        await _notificationService.SendNotificationAsync(token, "Новая задача", $"Вас добавили в новую задачу: \"{refreshedTask.Title}\"");
                     }
                 }
                 return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
             }
-            catch(TokenResponseException ex)
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Номер ошибки" + " " + ex.Message);
+            }
+            catch (TokenResponseException ex)
             {
                 _logger.LogError(ex.ToString());
                 return StatusCode(500, "Произошла внутренняя ошибка сервера: " + ex);
@@ -337,7 +343,7 @@ namespace ServerForToDoList.Controllers
                         }
                         foreach (var token in deviceTokens)
                         {
-                            await _notificationService.SendNotificationAsync(token, "Задача не прошла проверку", $"Ваша задача {Task.Title} не прошла проверку и возвращена в работу");
+                            await _notificationService.SendNotificationAsync(token, "Задача не прошла проверку", $"Ваша задача \"{Task.Title}\" не прошла проверку и возвращена в работу");
                         }
                     }
                 }
@@ -345,6 +351,10 @@ namespace ServerForToDoList.Controllers
                 task.IsConfirmed = flag;
                 await _context.SaveChangesAsync();
                 return NoContent();
+            }
+            catch(DbUpdateException ex)
+            {
+                return StatusCode(500, "Номер ошибки"+" "+ex.Message);
             }
             catch (Exception ex)
             {
@@ -368,6 +378,29 @@ namespace ServerForToDoList.Controllers
                 {
                     return UnprocessableEntity($"Нельзя сделать задачу выполненной, если она не завершенна исполнителем.");
                 }
+                
+                List<TaskAssignment> assignment = await _context.TaskAssignments.Where(t => t.TaskId == taskId).ToListAsync();
+                List<int> id = new List<int>();
+                foreach (var id_employee in assignment)
+                {
+                    id.Add(id_employee.UserId);
+                }
+                if (!id.IsNullOrEmpty())
+                {
+                    var deviceTokens = new List<string>();
+                    foreach (var idd in id)
+                    {
+                        deviceTokens = await _context.UserDeviceTokens
+                         .Where(u => u.UserId == idd)
+                         .Select(u => u.DeviceToken)
+                         .ToListAsync();
+                    }
+                    foreach (var token in deviceTokens)
+                    {
+                        await _notificationService.SendNotificationAsync(token, "Задача успешно сдана", $"Ваша задача \"{task.Title}\" прошла проверку и была сдана");
+                    }
+                }
+
                 task.Status = true;
                 task.CompletedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
