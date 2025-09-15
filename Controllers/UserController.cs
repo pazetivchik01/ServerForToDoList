@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Extensions;
 using ServerForToDoList.Model;
@@ -10,6 +12,7 @@ using System.Data;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 
 [ApiController]
@@ -17,10 +20,12 @@ using System.Text.Json.Serialization;
 public class UserController : ControllerBase
 {
     private readonly ToDoContext _context;
+    private readonly FcmNotificationService _notificationService;
 
-    public UserController(ToDoContext context)
+    public UserController(ToDoContext context, FcmNotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     [HttpGet("get/{id}")] // http://localhost:5131/api/user/get/1
@@ -190,12 +195,28 @@ public class UserController : ControllerBase
                 var user = await _context.Users
                 .Where(u => u.UserId == request.id)
                 .FirstOrDefaultAsync();
-                var mes = new
+
+                if (user != null)
                 {
-                    surname = user.Surname,
-                    first_name = user.FirstName
-                };
-                return Ok(mes); // delete user
+                    var deviceToken = await _context.UserDeviceTokens
+                         .Where(u => u.UserId == user.UserId)
+                         .Select(u => u)
+                         .ToListAsync();
+                    foreach (var token in deviceToken)
+                    {
+                        await _notificationService.SendNotificationAsync(token.DeviceToken, "Удаление аккаунта", $"Ваш аккаунт был удалён, если это ошибка обратитесь к администратору");
+                        _context.UserDeviceTokens.Remove(token);
+                    }
+
+                    _context.SaveChanges();
+                    
+                    var mes = new
+                    {
+                        surname = user.Surname,
+                        first_name = user.FirstName
+                    };
+                    return Ok(mes); // delete user
+                }
             }
 
             return BadRequest(new { Message = "Ошибка при получении данных" });

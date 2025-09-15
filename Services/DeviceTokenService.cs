@@ -38,7 +38,7 @@ public class DeviceTokenService
             await _context.UserDeviceTokens.AddAsync(newDevice);
             return "add new device";
         }
-        return "already up-to-date";
+            return "already up-to-date";
     }
 }
 
