@@ -182,19 +182,8 @@ namespace ServerForToDoList.Controllers
                 }
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
-
-                var deviceTokens = await _context.UserDeviceTokens
-                     .Where(u => u.UserId == int.Parse(userIdClaim))
-                     .Select(u => u.DeviceToken)
-                     .ToListAsync();
-
-                foreach (var token in deviceTokens)
-                {
-                    await _notificationService.SendNotificationAsync(token, "Новая задача", $"Назначена новая задача: \"{jsTask.Title}\"");
-                }
-
+                await NotifycationRepository.NotifyForUserCreateTask(task,_context,_notificationService);
                 TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
-
                 return Ok(responceTask);
             }
             catch (Exception ex)
@@ -223,7 +212,6 @@ namespace ServerForToDoList.Controllers
                 {
                     return NotFound();
                 }
-
                 existingTask.Title = updatedTask.Title;
                 existingTask.Description = updatedTask.Description;
                 existingTask.DueDate = updatedTask.DueDate;
@@ -234,49 +222,20 @@ namespace ServerForToDoList.Controllers
                 existingTask.Status = updatedTask.Status;
                 existingTask.CompletedAt = updatedTask.CompletedAt;
                 existingTask.IsConfirmed = updatedTask.IsConfirmed;
-
                 if (updatedTask.Assignments != null && updatedTask.Assignments.Count != 0)
                 {
                     await TaskAssignmentRepository.ProcessTaskAssignments(_context, existingTask, updatedTask.Assignments);
                 }
-
                 await _context.SaveChangesAsync();
-
-                // Перезагружаем задачу с актуальными данными (включая назначения)
                 var refreshedTask = await _context.Tasks
                     .Include(t => t.Assignments)
                     .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
-
-                List<Model.TaskAssignment> oldTaskAssignments = (List<Model.TaskAssignment>)existingTask.Assignments;
-                List<Model.TaskAssignment> newTaskAssignments = (List<Model.TaskAssignment>)refreshedTask.Assignments;
-
-                var unionAssignments = oldTaskAssignments.Union(newTaskAssignments).ToList();
-
-                if (unionAssignments.Count != 0)
-                {
-                    List<int> userId = new List<int>();
-                    for (int i = 0; i < unionAssignments.Count; i++)
-                    {
-                        userId.Add(unionAssignments[i].UserId);
-                    }
-                    var deviceTokens = new List<string>();
-                    foreach (var id in userId)
-                    {
-                        deviceTokens = await _context.UserDeviceTokens
-                         .Where(u => u.UserId == id)
-                         .Select(u => u.DeviceToken)
-                         .ToListAsync();
-                    }
-                    foreach (var token in deviceTokens)
-                    {
-                        await _notificationService.SendNotificationAsync(token, "Новая задача", $"Вас добавили в новую задачу: \"{refreshedTask.Title}\"");
-                    }
-                }
+                await NotifycationRepository.NotifyForUserUpdateTask(refreshedTask, _context, _notificationService);
                 return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
             }
             catch (DbUpdateException ex)
             {
-                return StatusCode(500, "Номер ошибки" + " " + ex.Message);
+                return StatusCode(500, "Номер ошибки " + ex.Message);
             }
             catch (TokenResponseException ex)
             {
@@ -297,64 +256,25 @@ namespace ServerForToDoList.Controllers
         {
             try
             {
-                var task = await _context.Tasks.FindAsync(taskId);
+                var task = await _context.Tasks
+                                 .Include(t => t.Assignments)
+                                 .FirstOrDefaultAsync(t => t.TaskId == taskId);
                 if (task == null)
                 {
                     return NotFound($"Задача с ID {taskId} не найдена.");
                 }
-
-
-                var Task = await _context.Tasks
-                  .Include(t => t.Assignments)
-                  .FirstOrDefaultAsync(t => t.TaskId == taskId);
-                List<TaskAssignment> assignment = (List<TaskAssignment>)Task.Assignments;
-                if (flag)
+                if (task.CompletedAt!=null&&task.IsConfirmed)
                 {
-                    int? id = assignment[0].AssignedBy;
-                    if (id != null)
-                    {
-                        var deviceTokens = new List<string>();
-                        deviceTokens = await _context.UserDeviceTokens
-                             .Where(u => u.UserId == id)
-                             .Select(u => u.DeviceToken)
-                             .ToListAsync();
-                        foreach (var token in deviceTokens)
-                        {
-                            await _notificationService.SendNotificationAsync(token, "Задача на проверку", $"Появилась задача на проверку");
-                        }
-                    }
+                    return BadRequest("Задача уже выполненна");
                 }
-                else
-                {
-                    List<int> id = new List<int>();
-                    foreach (var id_employee in assignment)
-                    {
-                        id.Add(id_employee.UserId);
-                    }
-                    if (!id.IsNullOrEmpty())
-                    {
-                        var deviceTokens = new List<string>();
-                        foreach (var idd in id)
-                        {
-                            deviceTokens = await _context.UserDeviceTokens
-                             .Where(u => u.UserId == idd)
-                             .Select(u => u.DeviceToken)
-                             .ToListAsync();
-                        }
-                        foreach (var token in deviceTokens)
-                        {
-                            await _notificationService.SendNotificationAsync(token, "Задача не прошла проверку", $"Ваша задача \"{Task.Title}\" не прошла проверку и возвращена в работу");
-                        }
-                    }
-                }
-
                 task.IsConfirmed = flag;
                 await _context.SaveChangesAsync();
+                await NotifycationRepository.NotifyConfirmTask(task, flag, _context, _notificationService);
                 return NoContent();
             }
-            catch(DbUpdateException ex)
+            catch (DbUpdateException ex)
             {
-                return StatusCode(500, "Номер ошибки"+" "+ex.Message);
+                return StatusCode(500, "Номер ошибки" + " " + ex.Message);
             }
             catch (Exception ex)
             {
@@ -378,32 +298,10 @@ namespace ServerForToDoList.Controllers
                 {
                     return UnprocessableEntity($"Нельзя сделать задачу выполненной, если она не завершенна исполнителем.");
                 }
-                
-                List<TaskAssignment> assignment = await _context.TaskAssignments.Where(t => t.TaskId == taskId).ToListAsync();
-                List<int> id = new List<int>();
-                foreach (var id_employee in assignment)
-                {
-                    id.Add(id_employee.UserId);
-                }
-                if (!id.IsNullOrEmpty())
-                {
-                    var deviceTokens = new List<string>();
-                    foreach (var idd in id)
-                    {
-                        deviceTokens = await _context.UserDeviceTokens
-                         .Where(u => u.UserId == idd)
-                         .Select(u => u.DeviceToken)
-                         .ToListAsync();
-                    }
-                    foreach (var token in deviceTokens)
-                    {
-                        await _notificationService.SendNotificationAsync(token, "Задача успешно сдана", $"Ваша задача \"{task.Title}\" прошла проверку и была сдана");
-                    }
-                }
-
                 task.Status = true;
                 task.CompletedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
+                await NotifycationRepository.NotifyForUserConfirmTask(task, _context, _notificationService);
                 return NoContent();
             }
             catch (Exception ex)
@@ -425,6 +323,7 @@ namespace ServerForToDoList.Controllers
                     return NotFound($"Задача с ID {taskId} не найдена.");
                 }
                 _context.Tasks.Remove(task);
+                await NotifycationRepository.NotifyDeleteTask(task, _context, _notificationService);
                 await _context.SaveChangesAsync();
                 return NoContent();
             }
