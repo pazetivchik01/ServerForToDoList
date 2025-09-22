@@ -82,7 +82,7 @@ public class DeviceController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Произошла внутренняя ошибка сервера");
+            return StatusCode(500, "internal server error");
         }
     }
 
