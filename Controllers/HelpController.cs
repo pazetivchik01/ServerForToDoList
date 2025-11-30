@@ -31,8 +31,8 @@ namespace ServerForToDoList.Controllers
                 var filePath = Path.Combine(_env.ContentRootPath, "Help", "Guide.html");
                 if (!System.IO.File.Exists(filePath))
                 {
-                    return NotFound("Справка не найдена");
                     HelpPageError.WithLabels("help page not found", "GetHelp").Inc();
+                    return NotFound("Справка не найдена");
                 }
 
                 return PhysicalFile(filePath, "text/html");
