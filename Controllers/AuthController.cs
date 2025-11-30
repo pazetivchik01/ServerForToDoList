@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
 using System.ComponentModel.DataAnnotations;
@@ -16,6 +17,17 @@ public class AuthController : ControllerBase
     private readonly ToDoContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+
+
+    private static readonly Counter AuthError = Metrics
+        .CreateCounter("todo_auth_errors_total", "Number of failed auth.",
+            new CounterConfiguration
+            {
+                LabelNames = new[] { "error_type", "auth_provider" }
+            });
+
+    private static readonly Counter JWTTokenCount = Metrics
+        .CreateCounter("todo_auth_jwt_token_created_total", "Total number of JWT token created.");
 
     public AuthController(
         ToDoContext context,
@@ -33,6 +45,7 @@ public class AuthController : ControllerBase
         var authHeader = Request.Headers["Authorization"].ToString();
         if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
         {
+            AuthError.WithLabels("Empty authHeader", "ValidateToken").Inc();
             return Ok(false);
         }
 
@@ -55,6 +68,7 @@ public class AuthController : ControllerBase
         }
         catch
         {
+            AuthError.WithLabels("Unknown error", "ValidateToken").Inc();
             return Ok(false);
         }
     }
@@ -71,16 +85,21 @@ public class AuthController : ControllerBase
             {
                 _logger.LogWarning($"Попытка входа с несуществующим логином: {request.login}");
                 var mes = new { Message = "Incorrect credentials" };
+                AuthError.WithLabels("Sing in try with unknown login", "Login").Inc();
                 return Unauthorized(mes);
             }
 
             if (user.DeletedAt >= DateTime.UtcNow)
+            {
                 return BadRequest(new { Message = "Ваш аккаунт удалён, если это ошибка обратитесь к администратору" });
+                AuthError.WithLabels("Sing in try in blocked account", "Login").Inc();
+            }
 
 
             if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
             {
                 _logger.LogWarning($"Неверный пароль для пользователя: {request.login}");
+                AuthError.WithLabels("Sing in try with error password", "Login").Inc();
                 return Unauthorized(new { Message = "Incorrect credentials" });
             }
 
@@ -104,6 +123,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка при авторизации");
+            AuthError.WithLabels("Login error" + ex.GetType().Name, "Login").Inc();
             return StatusCode(500, new { Message = "internal server error" });
         }
     }
@@ -129,6 +149,8 @@ public class AuthController : ControllerBase
             expires: DateTime.Now.AddHours(12),
             signingCredentials: creds);
 
+
+        JWTTokenCount.Inc();
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

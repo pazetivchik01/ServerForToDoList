@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MySqlConnector;
+using Prometheus;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
 using ServerForToDoList.Repositories;
@@ -19,6 +20,24 @@ namespace ServerForToDoList.Controllers
     [Route("api/task")]
     public class TasksController : ControllerBase
     {
+        private static readonly Counter TaskCreated = Metrics
+        .CreateCounter("todo_task_created_total", "Total number of tasks created.");
+
+        private static readonly Counter TaskErrors = Metrics
+        .CreateCounter("todo_task_errors_total", "Number of failed tasks.",
+            new CounterConfiguration
+            {
+                LabelNames = new[] {"error_type","task_provider"} 
+            });
+
+        private static readonly Histogram TaskCreatingDuration = Metrics
+        .CreateHistogram("todo_task_creating_duration", "Histogram of task creating durations.");
+
+        private static readonly Histogram TaskUpdatingDuration = Metrics
+        .CreateHistogram("todo_task_updating_duration", "Histogram of task updating durations.");
+
+        
+
         private readonly ToDoContext _context;
         private readonly FcmNotificationService _notificationService;
         private readonly ILogger<AuthController> _logger;
@@ -51,6 +70,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -81,6 +101,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -113,6 +134,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -143,6 +165,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -152,37 +175,43 @@ namespace ServerForToDoList.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateTaskAsync([FromBody] TaskDTO jsTask)
         {
-            try
+            using (TaskCreatingDuration.NewTimer())
             {
-                if (!ModelState.IsValid)
+                try
                 {
-                    return BadRequest(ModelState);
-                }
 
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
-                task.CreatedBy = int.Parse(userIdClaim);
-
-                task.CreatedAt = DateTime.UtcNow;
-                if (task.Assignments != null)
-                {
-                    foreach (var assignment in task.Assignments)
+                    if (!ModelState.IsValid)
                     {
-                        assignment.AssignedAt = DateTime.UtcNow;
-                        assignment.AssignedBy = int.Parse(userIdClaim);
+                        return BadRequest(ModelState);
                     }
+
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                    Model.Task task = Extensions.TaskExtensions.ToEntity(jsTask);
+                    task.CreatedBy = int.Parse(userIdClaim);
+
+                    task.CreatedAt = DateTime.UtcNow;
+                    if (task.Assignments != null)
+                    {
+                        foreach (var assignment in task.Assignments)
+                        {
+                            assignment.AssignedAt = DateTime.UtcNow;
+                            assignment.AssignedBy = int.Parse(userIdClaim);
+                        }
+                    }
+                    await _context.Tasks.AddAsync(task);
+                    await _context.SaveChangesAsync();
+                    await NotifycationRepository.NotifyForUserCreateTask(task, _context, _notificationService);
+                    TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
+                    TaskCreated.Inc();
+                    return Ok(responceTask);
+
                 }
-                await _context.Tasks.AddAsync(task);
-                await _context.SaveChangesAsync();
-                await NotifycationRepository.NotifyForUserCreateTask(task,_context,_notificationService);
-                TaskDTO responceTask = Extensions.TaskExtensions.ToDto(task);
-                return Ok(responceTask);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-                return StatusCode(500, "internal server error");
+                catch (Exception ex)
+                {
+                    TaskErrors.WithLabels("unknown_error", "server").Inc();
+                    return StatusCode(500, "internal server error");
+                }
             }
         }
 
@@ -191,54 +220,55 @@ namespace ServerForToDoList.Controllers
         [HttpPut]
         public async Task<IActionResult> UpdateTaskAsync( [FromBody] TaskDTO updatedTask)
         {
-            try
+            using (TaskUpdatingDuration.NewTimer())
             {
-                if (!ModelState.IsValid)
+                try
                 {
-                    return BadRequest(ModelState);
-                }
 
-                var existingTask = await _context.Tasks
-                    .Include(t => t.Assignments)
-                    .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
-                if (existingTask == null)
-                {
-                    return NotFound();
+                    if (!ModelState.IsValid)
+                    {
+                        return BadRequest(ModelState);
+                    }
+
+                    var existingTask = await _context.Tasks
+                        .Include(t => t.Assignments)
+                        .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
+                    if (existingTask == null)
+                    {
+                        return NotFound();
+                    }
+                    existingTask.Title = updatedTask.Title;
+                    existingTask.Description = updatedTask.Description;
+                    existingTask.DueDate = updatedTask.DueDate;
+                    existingTask.DueTime = updatedTask.DueTime;
+                    existingTask.StartDate = updatedTask.StartDate;
+                    existingTask.IsImportant = updatedTask.IsImportant;
+                    existingTask.TypeId = updatedTask.TypeId;
+                    existingTask.Status = updatedTask.Status;
+                    existingTask.CompletedAt = updatedTask.CompletedAt;
+                    existingTask.IsConfirmed = updatedTask.IsConfirmed;
+                    if (updatedTask.Assignments != null && updatedTask.Assignments.Count != 0)
+                    {
+                        await TaskAssignmentRepository.ProcessTaskAssignments(_context, existingTask, updatedTask.Assignments);
+                    }
+                    await _context.SaveChangesAsync();
+                    var refreshedTask = await _context.Tasks
+                        .Include(t => t.Assignments)
+                        .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
+                    await NotifycationRepository.NotifyForUserUpdateTask(refreshedTask, _context, _notificationService);
+                    return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
+
                 }
-                existingTask.Title = updatedTask.Title;
-                existingTask.Description = updatedTask.Description;
-                existingTask.DueDate = updatedTask.DueDate;
-                existingTask.DueTime = updatedTask.DueTime;
-                existingTask.StartDate = updatedTask.StartDate;
-                existingTask.IsImportant = updatedTask.IsImportant;
-                existingTask.TypeId = updatedTask.TypeId;
-                existingTask.Status = updatedTask.Status;
-                existingTask.CompletedAt = updatedTask.CompletedAt;
-                existingTask.IsConfirmed = updatedTask.IsConfirmed;
-                if (updatedTask.Assignments != null && updatedTask.Assignments.Count != 0)
+                catch (DbUpdateException ex)
                 {
-                    await TaskAssignmentRepository.ProcessTaskAssignments(_context, existingTask, updatedTask.Assignments);
+                    TaskErrors.WithLabels("db_update_failed", "Mysql").Inc();
+                    return StatusCode(500, "Error number " + ex.Message);
                 }
-                await _context.SaveChangesAsync();
-                var refreshedTask = await _context.Tasks
-                    .Include(t => t.Assignments)
-                    .FirstOrDefaultAsync(t => t.TaskId == updatedTask.TaskId);
-                await NotifycationRepository.NotifyForUserUpdateTask(refreshedTask, _context, _notificationService);
-                return Ok(Extensions.TaskExtensions.ToDto(refreshedTask));
-            }
-            catch (DbUpdateException ex)
-            {
-                return StatusCode(500, "Error number " + ex.Message);
-            }
-            catch (TokenResponseException ex)
-            {
-                _logger.LogError(ex.ToString());
-                return StatusCode(500, "internal server error: " + ex);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex.ToString());
-                return StatusCode(500, "internal server error");
+                catch (Exception ex)
+                {
+                    TaskErrors.WithLabels("unknown_error", "server").Inc();
+                    return StatusCode(500, "internal server error");
+                }
             }
         }
 
@@ -267,10 +297,12 @@ namespace ServerForToDoList.Controllers
             }
             catch (DbUpdateException ex)
             {
+                TaskErrors.WithLabels("db_update_failed", "Mysql").Inc();
                 return StatusCode(500, "Error number " + ex.Message);
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -299,6 +331,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }
@@ -322,6 +355,7 @@ namespace ServerForToDoList.Controllers
             }
             catch (Exception ex)
             {
+                TaskErrors.WithLabels("unknown_error", "server").Inc();
                 return StatusCode(500, "internal server error");
             }
         }

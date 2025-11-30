@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
+using Prometheus;
 using ServerForToDoList.Controllers;
 using ServerForToDoList.DBContext;
 using ServerForToDoList.Model;
@@ -14,6 +15,18 @@ public class DeviceController : ControllerBase
 {
     private readonly ToDoContext _context;
     private readonly DeviceTokenService _deviceService;
+
+
+    private static readonly Counter DeviceTokenClaimed = Metrics
+        .CreateCounter("todo_device_token_claimed_total", "Total number of device token claimed.");
+
+    private static readonly Counter DeviceTokenError = Metrics
+        .CreateCounter("todo_device_token_error_total", "Number of failed device token.",
+            new CounterConfiguration
+            {
+                LabelNames = new[] { "error_type", "device_token_provider" }
+            });
+
     public DeviceController(ToDoContext context, DeviceTokenService deviceService)
     {
         _context = context;
@@ -28,14 +41,17 @@ public class DeviceController : ControllerBase
                 return BadRequest("Token is required");
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var result = await _deviceService.RegisterOrUpdateTokenAsync(request, int.Parse(userIdClaim));
+            DeviceTokenClaimed.Inc();
             return Ok($"{result}: Device {request.Device}, token {request.Token}");
         }
         catch (DbUpdateException ex)
         {
+            DeviceTokenError.WithLabels("DbUpdateExeption", "RegisterDevice").Inc();
             return StatusCode(409, "Your FCM Token already registered");
         }
         catch (Exception ex)
         {
+            DeviceTokenError.WithLabels("unknown error", "RegisterDevice").Inc();
             return StatusCode(500, "Произошла внутреняя ошибка сервера");
         }
     }
@@ -56,6 +72,7 @@ public class DeviceController : ControllerBase
         }
         catch (Exception ex)
         {
+            DeviceTokenError.WithLabels("unknown error", "delete_token").Inc();
             return StatusCode(500, "Произошла внутренняя ошибка сервера");
         }
     }
@@ -64,8 +81,11 @@ public class DeviceController : ControllerBase
     {
         try
         {
-            if(string.IsNullOrEmpty(request.Token))
+            if (string.IsNullOrEmpty(request.Token))
+            {
+                DeviceTokenError.WithLabels("Empty token", "delete_this_token").Inc();
                 return BadRequest("Token is required");
+            }
 
             var deletingToken = _context.UserDeviceTokens.Where(w => w.DeviceToken == request.Token).Select(t => t);
             if (deletingToken.Count() != 0)
@@ -82,6 +102,7 @@ public class DeviceController : ControllerBase
         }
         catch (Exception ex)
         {
+            DeviceTokenError.WithLabels("unknown error", "delete_this_token").Inc();
             return StatusCode(500, "internal server error");
         }
     }

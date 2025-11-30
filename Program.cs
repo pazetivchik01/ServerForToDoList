@@ -7,7 +7,7 @@ using ServerForToDoList.DBContext;
 using System.Text;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
-
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,5 +57,12 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 app.MapControllers();
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/ping", () => "pong");
+app.UseRouting();
+app.UseHttpMetrics();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapMetrics();
+});
 app.Run();
