@@ -56,13 +56,12 @@ app.UseStaticFiles(new StaticFileOptions
         Path.Combine(Directory.GetCurrentDirectory(), "Help", "images")),
     RequestPath = "/images"
 });
-app.MapControllers();
-app.MapGet("/ping", () => "pong");
 app.UseRouting();
 app.UseHttpMetrics();
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapMetrics();
-});
+
+// Сопоставление конечных точек (endpoints)
+app.MapControllers();
+app.MapGet("/ping", () => "pong");
+app.MapMetrics(); // Правильный способ добавить эндпоинт /metrics
+
 app.Run();

@@ -1,5 +1,6 @@
 version: '3.8'
 services:
+
   todolist-db:
     image: mysql:8.0
     restart: always
@@ -15,6 +16,7 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d 
     networks:
       - todo-network
+
   aspnet-server:
     build:
       context: .
@@ -28,8 +30,48 @@ services:
     networks:
       - todo-network
 
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus
+    container_name: prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - todo-network
+
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    container_name: exporter
+    hostname: exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - todo-network
+
 networks:
   todo-network:
-
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
 volumes:
   mysql-data:
