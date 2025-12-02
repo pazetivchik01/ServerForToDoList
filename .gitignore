@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # FCM - token
 firebase-adminsdk.json
+
+# Grafana - bin files
+grafana_data/
