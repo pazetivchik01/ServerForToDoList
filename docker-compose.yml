@@ -13,14 +13,14 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d 
+      - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - todo-network
 
   aspnet-server:
     build:
       context: .
-      dockerfile: Dockerfile 
+      dockerfile: Dockerfile
     ports:
       - "5131:5131" # проброс порта контейнера на хост
     depends_on:
@@ -67,7 +67,7 @@ services:
     networks:
       - todo-network
 
-    grafana:
+  grafana:
     image: grafana/grafana
     user: root
     depends_on:
@@ -83,7 +83,7 @@ services:
     environment:
       TZ: "Europe/Moscow"
     networks:
-      - todo-metwork
+      - todo-network
 
 networks:
   todo-network:
