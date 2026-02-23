@@ -367,3 +367,7 @@ firebase-adminsdk.json
 
 # Grafana - bin files
 grafana_data/
+
+# Nginx CA keys
+*.key
+privkey.pem

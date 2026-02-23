@@ -16,4 +16,5 @@ RUN dotnet publish "ServerForToDoList.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY firebase-adminsdk.json /app
 ENTRYPOINT ["dotnet", "ServerForToDoList.dll"]

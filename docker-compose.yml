@@ -21,11 +21,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "5131:5131" # проброс порта контейнера на хост
     depends_on:
       - todolist-db
     environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:5131
       - ConnectionStrings__DefaultConnection=server=todolist-db;port=3306;database=ToDoList;user=root;password=rootpassword
     networks:
       - todo-network
@@ -84,6 +83,25 @@ services:
       TZ: "Europe/Moscow"
     networks:
       - todo-network
+  nginx:
+    image: nginx:stable-alpine3.23-perl
+    container_name: nginx
+    hostname: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - aspnet-server
+    networks:
+      - todo-network
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+
+
 
 networks:
   todo-network:
@@ -91,5 +109,7 @@ networks:
       driver: default
       config:
         - subnet: 172.28.0.0/16
+
+
 volumes:
   mysql-data:

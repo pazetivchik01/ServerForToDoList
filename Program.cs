@@ -8,6 +8,7 @@ using System.Text;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Prometheus;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,13 @@ builder.Services.AddSingleton(firebaseApp);
 builder.Services.AddTransient<FcmNotificationService>();
 builder.Services.AddControllers();
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+
 app.UseStaticFiles(); 
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -57,7 +65,10 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 app.UseRouting();
+
 app.UseHttpMetrics();
+app.UseAuthentication(); // Распознает пользователя по JWT токену
+app.UseAuthorization();  // Проверяет права (исправляет вашу ошибку)
 
 // Сопоставление конечных точек (endpoints)
 app.MapControllers();
