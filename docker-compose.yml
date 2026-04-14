@@ -24,7 +24,6 @@ services:
     depends_on:
       - todolist-db
     environment:
-      - ASPNETCORE_URLS=http://0.0.0.0:5131
       - ConnectionStrings__DefaultConnection=server=todolist-db;port=3306;database=ToDoList;user=root;password=rootpassword
       - ASPNETCORE_URLS=http://0.0.0.0:5131
     networks:
@@ -84,26 +83,6 @@ services:
       TZ: "Europe/Moscow"
     networks:
       - todo-network
-  nginx:
-    image: nginx:stable-alpine3.23-perl
-    container_name: nginx
-    hostname: nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - aspnet-server
-    networks:
-      - todo-network
-    restart: unless-stopped
-    environment:
-      TZ: "Europe/Moscow"
-
-
-
   nginx:
     image: nginx:stable-alpine3.23-perl
     container_name: nginx
