@@ -68,8 +68,7 @@ app.UseRouting();
 
 app.UseHttpMetrics();
 app.UseAuthentication(); // Распознает пользователя по JWT токену
-app.UseAuthorization();  // Проверяет права (исправляет вашу ошибку)
-
+app.UseAuthorization();
 // Сопоставление конечных точек (endpoints)
 app.MapControllers();
 app.MapGet("/ping", () => "pong");
