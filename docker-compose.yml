@@ -9,13 +9,11 @@ services:
       MYSQL_DATABASE: ToDoList
       MYSQL_USER: todoappuser
       MYSQL_PASSWORD: secretpassword
-    ports:
-      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
-      - todo-network
+      - db-network
 
   aspnet-server:
     build:
@@ -27,18 +25,17 @@ services:
       - ConnectionStrings__DefaultConnection=server=todolist-db;port=3306;database=ToDoList;user=root;password=rootpassword
       - ASPNETCORE_URLS=http://0.0.0.0:5131
     networks:
+      - db-network
       - todo-network
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v3
     volumes:
       - ./prometheus:/etc/prometheus
     container_name: prometheus
     hostname: prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
-    ports:
-      - 9090:9090
     restart: unless-stopped
     environment:
       TZ: "Europe/Moscow"
@@ -46,7 +43,7 @@ services:
       - todo-network
 
   node-exporter:
-    image: prom/node-exporter
+    image: prom/node-exporter:master-distroless
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -58,8 +55,6 @@ services:
       - --path.sysfs=/host/sys
       - --collector.filesystem.ignored-mount-points
       - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
-    ports:
-      - 9100:9100
     restart: unless-stopped
     environment:
       TZ: "Europe/Moscow"
@@ -67,22 +62,22 @@ services:
       - todo-network
 
   grafana:
-    image: grafana/grafana
-    user: root
+    image: grafana/grafana:13.1.0-25027462778
     depends_on:
       - prometheus
-    ports:
-      - 3000:3000
     volumes:
-      - ./grafana_data:/var/lib/grafana
+      - grafana_data:/var/lib/grafana
       - ./grafana_provisioning/:/etc/grafana/provisioning/
     container_name: grafana
     hostname: grafana
     restart: unless-stopped
     environment:
       TZ: "Europe/Moscow"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     networks:
       - todo-network
+
   nginx:
     image: nginx:stable-alpine3.23-perl
     container_name: nginx
@@ -106,6 +101,9 @@ networks:
       driver: default
       config:
         - subnet: 172.28.0.0/16
+  db-network:
+    internal: true
 
 volumes:
   mysql-data:
+  grafana_data:

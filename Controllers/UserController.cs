@@ -36,20 +36,20 @@ public class UserController : ControllerBase
     .CreateCounter("todo_user_creation_conflicts_total", "Number of failed user creations due to existing login.");
 
     private static readonly Counter UserNotFoundWithId = Metrics
-    .CreateCounter("todo_user_failed_find__total", "Number of failed user find by id.");
+    .CreateCounter("todo_user_failed_find_total", "Number of failed user find by id.");
 
     private static readonly Counter ControllerErrors = Metrics
     .CreateCounter("todo_controller_errors_total", "Total controller errors",
         new CounterConfiguration { LabelNames = new[] { "method", "error_type" } });
 
     private static readonly Histogram UsersListSizeByCreator = Metrics
-    .CreateHistogram("todo_users_list_size", "Number of users returned in list requests by creator",
+    .CreateHistogram("todo_users_list_size_creator", "Number of users returned in list requests by creator",
     new HistogramConfiguration
     {
         Buckets = new[] { 0.0, 10.0, 50.0, 100.0, 500.0, 1000.0 }
     });
     private static readonly Histogram UsersListSizeByManage = Metrics
-    .CreateHistogram("todo_users_list_size", "Number of users returned in list requests by Manage",
+    .CreateHistogram("todo_users_list_size_manage", "Number of users returned in list requests by Manage",
     new HistogramConfiguration
     {
         Buckets = new[] { 0.0, 10.0, 50.0, 100.0, 500.0, 1000.0 }

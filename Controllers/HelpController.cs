@@ -11,7 +11,7 @@ namespace ServerForToDoList.Controllers
         private readonly IWebHostEnvironment _env;
 
         private static readonly Counter HelpPageError = Metrics
-        .CreateCounter("todo_task_created_total", "Total number of tasks created.",
+        .CreateCounter("todo_help_error_total", "Total number of help page error open.",
             new CounterConfiguration
             {
                 LabelNames = new[] { "error_type", "help_provider"}

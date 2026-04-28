@@ -31,10 +31,10 @@ namespace ServerForToDoList.Controllers
             });
 
         private static readonly Histogram TaskCreatingDuration = Metrics
-        .CreateHistogram("todo_task_creating_duration", "Histogram of task creating durations.");
+        .CreateHistogram("todo_task_creating_duration_ms", "Histogram of task creating durations.");
 
         private static readonly Histogram TaskUpdatingDuration = Metrics
-        .CreateHistogram("todo_task_updating_duration", "Histogram of task updating durations.");
+        .CreateHistogram("todo_task_updating_duration_ms", "Histogram of task updating durations.");
 
         
 
