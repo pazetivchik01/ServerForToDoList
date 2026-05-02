@@ -239,35 +239,45 @@ public class UserController : ControllerBase
         {
             if (request.id > 0)
             {
-                await UserRepository.SoftDeleteUserAsync(_context, request.id);
                 var user = await _context.Users
                 .Where(u => u.UserId == request.id)
                 .FirstOrDefaultAsync();
 
                 if (user != null)
                 {
-                    if(user.deletedAt == null){
-                    var deviceToken = await _context.UserDeviceTokens
+
+                    if (user.DeletedAt == null)
+                    {
+                        await UserRepository.SoftDeleteUserAsync(_context, request.id);
+                        var deviceToken = await _context.UserDeviceTokens
                          .Where(u => u.UserId == user.UserId)
                          .Select(u => u)
                          .ToListAsync();
-                    foreach (var token in deviceToken)
-                    {
-                        await _notificationService.SendNotificationAsync(token.DeviceToken, "Удаление аккаунта", $"Ваш аккаунт был удалён, если это ошибка обратитесь к администратору");
-                        _context.UserDeviceTokens.Remove(token);
-                    }
+                        foreach (var token in deviceToken)
+                        {
+                            await _notificationService.SendNotificationAsync(token.DeviceToken, "Удаление аккаунта", $"Ваш аккаунт был удалён, если это ошибка обратитесь к администратору");
+                            _context.UserDeviceTokens.Remove(token);
+                        }
 
-                    _context.SaveChanges();
-                    
-                    var mes = new
-                    {
-                        surname = user.Surname,
-                        first_name = user.FirstName
-                    };
-                    return Ok(mes); // delete user
-                    }
-                    else{
+                        _context.SaveChanges();
 
+                        var mes = new
+                        {
+                            surname = user.Surname,
+                            first_name = user.FirstName
+                        };
+                        return Ok(mes); // delete user
+                    }
+                    else
+                    {
+                        user.DeletedAt = null;
+                        await UserRepository.UpdateUserAsync(_context, user);
+                        var mes = new
+                        {
+                            surname = user.Surname,
+                            first_name = user.FirstName
+                        };
+                        return Ok(mes); // delete user
                     }
 
                 }
