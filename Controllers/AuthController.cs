@@ -83,22 +83,20 @@ public class AuthController : ControllerBase
 
             if (user == null)
             {
-                _logger.LogWarning($"Попытка входа с несуществующим логином: {request.login}");
+                _logger.LogWarning($"Attempted to log in with a non-existent login: {request.login}");
                 var mes = new { Message = "Incorrect credentials" };
                 AuthError.WithLabels("Sing in try with unknown login", "Login").Inc();
                 return Unauthorized(mes);
             }
 
-            if (user.DeletedAt >= DateTime.UtcNow)
+            if (user.DeletedAt <= DateTime.UtcNow)
             {
-                return BadRequest(new { Message = "Ваш аккаунт удалён, если это ошибка обратитесь к администратору" });
-                AuthError.WithLabels("Sing in try in blocked account", "Login").Inc();
-            }
+		AuthError.WithLabels("Sing in try in blocked account", "Login").Inc();
+                return BadRequest(new { Message = "Your account has been deleted. If an error occurred, please contact the administrator." } );
 
-
-            if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
+	    if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
             {
-                _logger.LogWarning($"Неверный пароль для пользователя: {request.login}");
+                _logger.LogWarning($"Wrong password for user: {request.login}");
                 AuthError.WithLabels("Sing in try with error password", "Login").Inc();
                 return Unauthorized(new { Message = "Incorrect credentials" });
             }
@@ -122,7 +120,7 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при авторизации");
+            _logger.LogError(ex, "authorization error");
             AuthError.WithLabels("Login error" + ex.GetType().Name, "Login").Inc();
             return StatusCode(500, new { Message = "internal server error" });
         }
