@@ -246,6 +246,7 @@ public class UserController : ControllerBase
 
                 if (user != null)
                 {
+                    if(user.deletedAt == null){
                     var deviceToken = await _context.UserDeviceTokens
                          .Where(u => u.UserId == user.UserId)
                          .Select(u => u)
@@ -264,6 +265,11 @@ public class UserController : ControllerBase
                         first_name = user.FirstName
                     };
                     return Ok(mes); // delete user
+                    }
+                    else{
+
+                    }
+
                 }
             }
 
