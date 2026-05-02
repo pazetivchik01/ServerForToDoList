@@ -79,7 +79,7 @@ public class AuthController : ControllerBase
         try
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Login == request.login);
+                .FirstOrDefaultAsync(u => EF.Functions.Collate(u.Login, "utf8mb4_bin") == request.login);
 
             if (user == null)
             {

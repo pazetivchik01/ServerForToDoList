@@ -129,7 +129,7 @@ namespace ServerForToDoList.Repositories
         public static async System.Threading.Tasks.Task SoftDeleteUserAsync(ToDoContext context, int userId)
         {
            var user = await context.Users.FindAsync(userId);
-           user.DeletedAt = DateTime.Now;
+           user.DeletedAt = DateTime.UtcNow;
            await context.SaveChangesAsync();
         }
         #endregion
