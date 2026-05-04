@@ -93,7 +93,7 @@ public class AuthController : ControllerBase
             {
 		AuthError.WithLabels("Sing in try in blocked account", "Login").Inc();
                 return BadRequest(new { Message = "Your account has been deleted. If an error occurred, please contact the administrator." } );
-
+            }
 	    if (!BCrypt.Net.BCrypt.Verify(request.password, user.PasswordHash))
             {
                 _logger.LogWarning($"Wrong password for user: {request.login}");

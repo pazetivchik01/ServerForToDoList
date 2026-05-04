@@ -13,6 +13,7 @@ using System;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using ServerForToDoList.Services;
 
 namespace ServerForToDoList.Controllers
 {
@@ -27,7 +28,7 @@ namespace ServerForToDoList.Controllers
         .CreateCounter("todo_task_errors_total", "Number of failed tasks.",
             new CounterConfiguration
             {
-                LabelNames = new[] {"error_type","task_provider"} 
+                LabelNames = new[] { "error_type", "task_provider" }
             });
 
         private static readonly Histogram TaskCreatingDuration = Metrics
@@ -36,7 +37,7 @@ namespace ServerForToDoList.Controllers
         private static readonly Histogram TaskUpdatingDuration = Metrics
         .CreateHistogram("todo_task_updating_duration_ms", "Histogram of task updating durations.");
 
-        
+
 
         private readonly ToDoContext _context;
         private readonly FcmNotificationService _notificationService;
@@ -218,7 +219,7 @@ namespace ServerForToDoList.Controllers
         // PUT api/task
         [Authorize(Roles = "admin,manager")]
         [HttpPut]
-        public async Task<IActionResult> UpdateTaskAsync( [FromBody] TaskDTO updatedTask)
+        public async Task<IActionResult> UpdateTaskAsync([FromBody] TaskDTO updatedTask)
         {
             using (TaskUpdatingDuration.NewTimer())
             {
@@ -286,7 +287,7 @@ namespace ServerForToDoList.Controllers
                 {
                     return NotFound($"Task with ID \"{taskId}\" not found");
                 }
-                if (task.CompletedAt!=null&&task.IsConfirmed)
+                if (task.CompletedAt != null && task.IsConfirmed)
                 {
                     return BadRequest("The task has already been completed");
                 }
@@ -376,6 +377,7 @@ namespace ServerForToDoList.Controllers
         public DateTime DueDate { get; set; }
 
         [JsonPropertyName("due_time")]
+        [JsonConverter(typeof(TimeSpanConverter))]
         public TimeSpan? DueTime { get; set; }
 
         [JsonPropertyName("start_date")]
